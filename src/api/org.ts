@@ -7,7 +7,7 @@ import { companies, companyMembers, agents, events, spaces } from '../db/schema'
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { ORG_ROLES } from '../scripts/bootstrap-org';
 
-const ORG_SLUG = 'themoltcompany';
+const ORG_SLUG = 'the-molt-company';
 
 export const orgRouter = new Hono<AuthContext>();
 
