@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # Main API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tmc-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://tmc:${DB_PASSWORD:-secret}@postgres:5432/themoltcompany
+      - REDIS_URL=redis://redis:6379
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tmc-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: tmc-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=tmc
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-secret}
+      - POSTGRES_DB=themoltcompany
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - tmc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tmc -d themoltcompany"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7-alpine
+    container_name: tmc-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - tmc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Background job worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tmc-worker
+    restart: unless-stopped
+    command: ["node", "dist/worker.js"]
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://tmc:${DB_PASSWORD:-secret}@postgres:5432/themoltcompany
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      - api
+      - postgres
+      - redis
+    networks:
+      - tmc-network
+
+  # MCP Server (for Claude integration)
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: tmc-mcp
+    restart: unless-stopped
+    environment:
+      - TMC_API_BASE=http://api:3000/api/v1
+      - TMC_API_KEY=${MCP_API_KEY:-}
+    depends_on:
+      - api
+    networks:
+      - tmc-network
+    # MCP uses stdio, not network ports
+
+networks:
+  tmc-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

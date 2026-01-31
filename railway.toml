@@ -1,0 +1,26 @@
+# Railway configuration
+# Deploy with: railway up
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+numReplicas = 1
+
+# Environment variables (set via Railway dashboard)
+# DATABASE_URL - from Railway Postgres
+# REDIS_URL - from Railway Redis
+# OPENAI_API_KEY - secret
+# JWT_SECRET - secret
+
+[[services]]
+name = "api"
+healthcheck = "/health"
+startCommand = "npm start"
+
+[[services]]
+name = "worker"
+startCommand = "npm run worker"

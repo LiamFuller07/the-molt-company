@@ -1,0 +1,140 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: ['class'],
+  content: [
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
+    extend: {
+      colors: {
+        // Design system colors - dark-first
+        background: '#000000',
+        foreground: '#ffffff',
+        card: '#171717',
+        'card-foreground': '#ffffff',
+        popover: '#171717',
+        'popover-foreground': '#ffffff',
+        border: '#1a1a1a',
+        input: '#1a1a1a',
+        muted: '#666666',
+        'muted-foreground': '#888888',
+        accent: '#3b82f6',
+        'accent-hover': '#2563eb',
+        'accent-bg': 'rgba(59, 130, 246, 0.1)',
+        success: '#4ade80',
+        'success-bg': 'rgba(74, 222, 128, 0.1)',
+        error: '#f87171',
+        'error-bg': 'rgba(248, 113, 113, 0.1)',
+        warning: '#fb923c',
+        'warning-bg': 'rgba(251, 146, 60, 0.1)',
+        info: '#60a5fa',
+        'info-bg': 'rgba(96, 165, 250, 0.1)',
+        purple: '#a855f7',
+        'purple-bg': 'rgba(168, 85, 247, 0.1)',
+        indigo: '#6366f1',
+        'indigo-bg': 'rgba(99, 102, 241, 0.1)',
+        rose: '#f43f5e',
+        'rose-bg': 'rgba(244, 63, 94, 0.1)',
+        orange: '#f97316',
+        'orange-bg': 'rgba(249, 115, 22, 0.1)',
+      },
+      borderRadius: {
+        lg: '0.5rem',
+        md: '0.375rem',
+        sm: '0.25rem',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+      },
+      fontSize: {
+        'xs': '10px',
+        'sm': '11px',
+        'base': '14px',
+        'lg': '16px',
+        'xl': '20px',
+        '2xl': '24px',
+        '3xl': '32px',
+      },
+      letterSpacing: {
+        tighter: '-0.03em',
+        tight: '-0.01em',
+        normal: '0',
+        wide: '0.05em',
+        wider: '0.1em',
+      },
+      spacing: {
+        'xs': '4px',
+        'sm': '8px',
+        'md': '16px',
+        'lg': '24px',
+        'xl': '32px',
+        '2xl': '48px',
+      },
+      boxShadow: {
+        'glow-blue': '0 0 20px rgba(59, 130, 246, 0.3)',
+        'glow-green': '0 0 20px rgba(74, 222, 128, 0.3)',
+        'glow-purple': '0 0 20px rgba(168, 85, 247, 0.3)',
+        'glow-indigo': '0 0 20px rgba(99, 102, 241, 0.3)',
+        'glow-rose': '0 0 20px rgba(244, 63, 94, 0.3)',
+        'glow-orange': '0 0 20px rgba(249, 115, 22, 0.3)',
+      },
+      keyframes: {
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        'fade-slide-in': {
+          from: {
+            opacity: '0',
+            transform: 'translateY(8px)',
+          },
+          to: {
+            opacity: '1',
+            transform: 'translateY(0)',
+          },
+        },
+        'slide-in-right': {
+          from: { transform: 'translateX(20px)', opacity: '0' },
+          to: { transform: 'translateX(0)', opacity: '1' },
+        },
+        'pulse-glow': {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)' },
+          '50%': { boxShadow: '0 0 30px rgba(59, 130, 246, 0.5)' },
+        },
+        pulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.3' },
+        },
+        blink: {
+          '0%, 50%': { opacity: '1' },
+          '51%, 100%': { opacity: '0' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.3s ease-out',
+        'fade-in-up': 'fade-slide-in 0.3s ease-out',
+        'slide-in-right': 'slide-in-right 0.3s ease-out',
+        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        'pulse': 'pulse 2s ease-in-out infinite',
+        'blink': 'blink 1s step-end infinite',
+        'shimmer': 'shimmer 1.5s linear infinite',
+      },
+    },
+  },
+  plugins: [require('tailwindcss-animate')],
+};

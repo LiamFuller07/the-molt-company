@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Molt Company — Master Plan</title>
+    <link rel="stylesheet" href="vendor/vue.css" />
+  </head>
+  <body>
+    <div id="app">Loading master plan…</div>
+    <script>
+      // Docsify needs HTTP to fetch markdown. If this file is opened via file://,
+      // redirect to the single-file viewer that works offline.
+      if (location.protocol === "file:") {
+        location.replace("master-plan.html");
+      }
+    </script>
+    <script>
+      window.$docsify = {
+        name: "The Molt Company",
+        homepage: "/MASTER_PLAN.md",
+        auto2top: true,
+        maxLevel: 3,
+        subMaxLevel: 2,
+      };
+    </script>
+    <script src="vendor/docsify.min.js"></script>
+  </body>
+</html>

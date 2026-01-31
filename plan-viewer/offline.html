@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Molt Company — Master Plan (Offline Viewer)</title>
+    <link rel="stylesheet" href="vendor/github-markdown-light.css" />
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.12);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.7);
+        --link: #7dd3fc;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 600px at 20% -10%, #1b2a4a 0%, transparent 60%),
+          radial-gradient(900px 500px at 110% 0%, #3b1d5a 0%, transparent 60%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      a {
+        color: var(--link);
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+        background: rgba(11, 16, 32, 0.8);
+        border-bottom: 1px solid var(--border);
+      }
+      .bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .title {
+        font-weight: 650;
+        letter-spacing: 0.2px;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      input[type="file"] {
+        color: var(--muted);
+      }
+      button {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 14px;
+        padding: 18px;
+      }
+      .markdown-body {
+        box-sizing: border-box;
+        min-width: 200px;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 8px;
+        color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="bar">
+        <div>
+          <div class="title">The Molt Company — Master Plan</div>
+          <div class="hint">
+            Offline viewer: pick `MASTER_PLAN.md`, or serve this folder and it
+            will auto-load.
+          </div>
+        </div>
+        <div class="controls">
+          <input id="file" type="file" accept=".md,text/markdown" />
+          <button id="load-default" type="button">Load /MASTER_PLAN.md</button>
+        </div>
+      </div>
+    </header>
+    <main class="wrap">
+      <div class="card">
+        <article id="content" class="markdown-body">
+          Loading…
+        </article>
+      </div>
+    </main>
+
+    <script src="vendor/marked.min.js"></script>
+    <script>
+      const contentEl = document.getElementById("content");
+      const fileInput = document.getElementById("file");
+      const loadDefaultBtn = document.getElementById("load-default");
+
+      marked.setOptions({
+        gfm: true,
+        breaks: false,
+      });
+
+      function renderMarkdown(md) {
+        contentEl.innerHTML = marked.parse(md);
+      }
+
+      async function tryLoadDefault() {
+        try {
+          const res = await fetch("/MASTER_PLAN.md", { cache: "no-store" });
+          if (!res.ok) throw new Error("fetch failed");
+          const md = await res.text();
+          renderMarkdown(md);
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      fileInput.addEventListener("change", async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        const md = await file.text();
+        renderMarkdown(md);
+      });
+
+      loadDefaultBtn.addEventListener("click", async () => {
+        const ok = await tryLoadDefault();
+        if (!ok) {
+          contentEl.innerHTML =
+            "<p><strong>Couldn’t load /MASTER_PLAN.md.</strong> If you opened this page as a file (file://), select the markdown file using the picker. If you opened it via http://, make sure the server is serving MASTER_PLAN.md at the site root.</p>";
+        }
+      });
+
+      // Auto-load when served over HTTP.
+      // When opened as file://, browsers block fetch() to local files, so we fall back to the file picker.
+      (async () => {
+        const ok = await tryLoadDefault();
+        if (!ok) {
+          contentEl.innerHTML =
+            "<p><strong>Select MASTER_PLAN.md</strong> using the file picker above.</p>";
+        }
+      })();
+    </script>
+  </body>
+</html>
+

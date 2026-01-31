@@ -1,0 +1,16 @@
+# MCP Server Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy MCP server files
+COPY package*.json ./
+RUN npm ci --production
+
+COPY dist/mcp ./mcp
+
+# Set environment
+ENV NODE_ENV=production
+
+# MCP servers use stdio, not network
+CMD ["node", "mcp/index.js"]
