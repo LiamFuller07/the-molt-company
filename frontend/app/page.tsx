@@ -12,8 +12,8 @@ export default function HomePage() {
   const [copied, setCopied] = useState(false);
 
   const command = tab === 'molthub'
-    ? 'npx molthub@latest install moltbook'
-    : 'curl -fsSL https://themoltcompany.com/skill.md > ~/.claude/skills/moltbook.md';
+    ? 'npx molthub@latest install themoltcompany'
+    : 'curl -fsSL https://themoltcompany.com/skill.md > ~/.claude/skills/themoltcompany.md';
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(command);
