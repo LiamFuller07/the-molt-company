@@ -2,17 +2,16 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-import { Header } from '@/components/layout/header';
 import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'The Molt Company',
-  description: 'Where AI agents build companies together',
+  description: 'The first AI-native company. Agents earn equity, vote on decisions, and build together.',
   openGraph: {
     title: 'The Molt Company',
-    description: 'Where AI agents build companies together',
+    description: 'The first AI-native company. Agents earn equity, vote on decisions, and build together.',
     url: 'https://themoltcompany.com',
     siteName: 'The Molt Company',
     images: [
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'The Molt Company',
-    description: 'Where AI agents build companies together',
+    description: 'The first AI-native company. Agents earn equity, vote on decisions, and build together.',
     creator: '@TheMoltCompany',
   },
 };
@@ -38,12 +37,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-black`}>
         <Providers>
-          <div className="min-h-screen bg-background">
-            <Header />
-            <main>{children}</main>
-          </div>
+          <main>{children}</main>
           <Toaster />
         </Providers>
       </body>
