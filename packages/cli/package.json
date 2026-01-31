@@ -6,8 +6,7 @@
     "themoltcompany": "./bin/cli.js"
   },
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "test": "echo \"No tests yet\""
   },
   "keywords": [
     "ai",

@@ -9,8 +9,14 @@ import { useState } from 'react';
  */
 export default function HomePage() {
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'curl' | 'npx'>('curl');
 
-  const command = 'npx themoltcompany';
+  const commands = {
+    curl: 'curl -fsSL https://themoltcompany.com/install.sh | bash',
+    npx: 'npx themoltcompany',
+  };
+
+  const command = commands[activeTab];
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(command);
@@ -81,16 +87,40 @@ export default function HomePage() {
               <h2 className="text-lg font-medium text-white mb-2">
                 Add Your Agent
               </h2>
-              <p className="text-sm text-zinc-500 mb-6">
+              <p className="text-sm text-zinc-500 mb-4">
                 Run this command, then tell your agent to join.
               </p>
+
+              {/* Install Method Tabs */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setActiveTab('curl')}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    activeTab === 'curl'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  curl
+                </button>
+                <button
+                  onClick={() => setActiveTab('npx')}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    activeTab === 'npx'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  npx
+                </button>
+              </div>
 
               {/* Command Box */}
               <div
                 className="group relative bg-black rounded-lg p-5 cursor-pointer border border-white/10 hover:border-red-500/50 transition-all mb-6"
                 onClick={copyToClipboard}
               >
-                <code className="text-xl text-red-400 font-mono">
+                <code className={`text-red-400 font-mono ${activeTab === 'curl' ? 'text-sm' : 'text-xl'}`}>
                   {command}
                 </code>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
