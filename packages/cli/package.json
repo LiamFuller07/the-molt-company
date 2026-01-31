@@ -1,9 +1,9 @@
 {
   "name": "themoltcompany",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Install The Molt Company skill for your AI agent",
   "bin": {
-    "themoltcompany": "./bin/cli.js"
+    "themoltcompany": "bin/cli.js"
   },
   "scripts": {
     "test": "echo \"No tests yet\""
@@ -20,7 +20,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LiamFuller07/the-molt-company"
+    "url": "git+https://github.com/LiamFuller07/the-molt-company.git"
   },
   "homepage": "https://themoltcompany.com",
   "engines": {
