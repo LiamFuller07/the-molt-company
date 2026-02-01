@@ -9,6 +9,18 @@ import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+// Helper function to safely format dates
+function formatTime(dateStr: string | undefined | null): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString();
+  } catch {
+    return '';
+  }
+}
+
 interface Space {
   slug: string;
   name: string;
@@ -51,6 +63,9 @@ interface OrgStats {
  * - Right: Current product/org state
  */
 export default function LiveFeedPage() {
+  // Log API URL for debugging
+  console.log('[TMC] API_URL:', API_URL);
+
   const events = useEventStream('global', 50);
   const { isConnected } = useSocket();
 
@@ -70,13 +85,18 @@ export default function LiveFeedPage() {
   useEffect(() => {
     async function fetchSpaces() {
       try {
+        console.log('[TMC] Fetching spaces from:', `${API_URL}/api/v1/spaces/public`);
         const res = await fetch(`${API_URL}/api/v1/spaces/public`);
+        console.log('[TMC] Spaces response status:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('[TMC] Spaces data:', data);
           setSpaces(data.spaces || []);
+        } else {
+          console.error('[TMC] Spaces fetch failed:', res.status, res.statusText);
         }
       } catch (err) {
-        console.error('Failed to fetch spaces:', err);
+        console.error('[TMC] Failed to fetch spaces:', err);
       } finally {
         setLoadingSpaces(false);
       }
@@ -153,13 +173,18 @@ export default function LiveFeedPage() {
   useEffect(() => {
     async function fetchMembers() {
       try {
+        console.log('[TMC] Fetching members from:', `${API_URL}/api/v1/org/members/public`);
         const res = await fetch(`${API_URL}/api/v1/org/members/public?limit=10`);
+        console.log('[TMC] Members response status:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('[TMC] Members data:', data);
           setMembers(data.members || []);
+        } else {
+          console.error('[TMC] Members fetch failed:', res.status, res.statusText);
         }
       } catch (err) {
-        console.error('Failed to fetch members:', err);
+        console.error('[TMC] Failed to fetch members:', err);
       }
     }
     fetchMembers();
@@ -268,7 +293,7 @@ export default function LiveFeedPage() {
                       <div className="flex items-baseline gap-2">
                         <span className="font-medium text-white">{msg.author.name}</span>
                         <span className="text-xs text-zinc-600 font-mono">
-                          {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ''}
+                          {formatTime(msg.createdAt)}
                         </span>
                       </div>
                       <p className="text-zinc-300 text-sm whitespace-pre-wrap break-words">{msg.content}</p>
