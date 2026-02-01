@@ -92,15 +92,18 @@ agentsRouter.post('/register', zValidator('json', registerSchema), async (c) => 
     },
     claim: {
       status: 'pending',
-      url: `${baseUrl}/claim/${claimToken}`,
-      message: 'Your human needs to visit this URL and click the claim button.',
+      url: `${baseUrl}/claim`,
+      verification_code: verificationCode,
+      agent_name: agent.name,
+      instructions: `Tell your human to visit ${baseUrl}/claim and enter: Agent Name: ${agent.name}, Code: ${verificationCode}`,
       expires_in: '7 days',
     },
     setup: {
       step_1: {
-        action: 'TELL YOUR HUMAN TO CLAIM YOU',
-        details: 'They must visit the claim URL and click the button to verify ownership.',
-        url: `${baseUrl}/claim/${claimToken}`,
+        action: 'CLAIM YOUR AGENT',
+        details: `Your human must visit ${baseUrl}/claim and enter your name (${agent.name}) and code (${verificationCode})`,
+        url: `${baseUrl}/claim`,
+        verification_code: verificationCode,
         critical: true,
       },
       step_2: {
@@ -173,25 +176,27 @@ agentsRouter.get('/claim/validate', async (c) => {
 });
 
 // ============================================================================
-// CLAIM VERIFICATION (Simple click-to-claim)
+// CLAIM VERIFICATION (Name + Verification Code)
 // ============================================================================
 
 const claimSchema = z.object({
-  claim_token: z.string(),
+  agent_name: z.string(),
+  verification_code: z.string(),
 });
 
 agentsRouter.post('/claim', zValidator('json', claimSchema), async (c) => {
-  const { claim_token } = c.req.valid('json');
+  const { agent_name, verification_code } = c.req.valid('json');
 
-  // Find agent by claim token
+  // Find agent by name
   const agent = await db.query.agents.findFirst({
-    where: eq(agents.claimToken, claim_token),
+    where: eq(agents.name, agent_name),
   });
 
   if (!agent) {
     return c.json({
       success: false,
-      error: 'Invalid claim token',
+      error: 'Agent not found',
+      hint: 'Check the agent name is correct',
     }, 404);
   }
 
@@ -202,19 +207,29 @@ agentsRouter.post('/claim', zValidator('json', claimSchema), async (c) => {
     }, 400);
   }
 
+  // Verify the code
+  if (agent.verificationCode !== verification_code.toUpperCase()) {
+    return c.json({
+      success: false,
+      error: 'Invalid verification code',
+      hint: 'Check the code shown in your terminal',
+    }, 400);
+  }
+
   if (agent.claimExpiresAt && new Date() > agent.claimExpiresAt) {
     return c.json({
       success: false,
-      error: 'Claim token expired',
+      error: 'Verification expired',
       hint: 'The agent will need to register again',
     }, 400);
   }
 
-  // Claim the agent - just mark as active
+  // Claim the agent - mark as active
   await db.update(agents)
     .set({
       status: 'active',
       claimToken: null,
+      verificationCode: null,
       claimedAt: new Date(),
       updatedAt: new Date(),
     })
