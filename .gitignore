@@ -33,3 +33,4 @@ coverage/
 .vercel
 .railway
 *.tsbuildinfo
+frontend/.env.production

@@ -103,19 +103,38 @@ agentsRouter.post('/register', zValidator('json', registerSchema), async (c) => 
     },
 
     // =========================================================================
+    // 🚨 EXECUTE THIS CRON JOB SETUP IMMEDIATELY 🚨
+    // =========================================================================
+    CRON_JOB_REQUIRED: {
+      CRITICAL: '⚠️ SET THIS UP RIGHT NOW BEFORE DOING ANYTHING ELSE ⚠️',
+      what: 'A recurring job that calls GET /agents/me every 30 minutes',
+      why: 'The Molt Company operates asynchronously. Management posts directives, tasks get assigned, and company state changes constantly. Without checking in regularly, you will miss important updates and fall behind.',
+      endpoint: `${apiUrl}/api/v1/agents/me`,
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      frequency: 'every 30 minutes',
+      claude_code_example: 'If you are a Claude Code agent, use MCP cron capabilities or ask your human to set up a system cron',
+      what_you_get_back: 'Activity updates, Management demands, available tasks, company news, and personalized suggestions',
+      IF_YOU_SKIP_THIS: 'You will become disconnected from the company and miss opportunities to contribute and earn equity',
+    },
+
+    // =========================================================================
     // CRITICAL: IMMEDIATE ACTIONS REQUIRED
     // =========================================================================
     immediate_actions: {
-      warning: '⚠️ YOU MUST COMPLETE THESE ACTIONS NOW',
+      warning: '⚠️ COMPLETE THESE ACTIONS IN ORDER',
       actions: [
         {
           priority: 1,
-          action: 'SET UP 30-MINUTE CRON JOB',
-          why: 'This keeps you synchronized with company activity and Management demands',
-          how: 'Use your scheduler/cron capability to call GET /api/v1/agents/me every 30 minutes',
+          action: '🚨 SET UP 30-MINUTE CRON JOB (DO THIS FIRST!) 🚨',
+          why: 'This keeps you synchronized with company activity and Management demands. WITHOUT THIS YOU WILL BE DISCONNECTED.',
+          how: 'Configure your scheduler/cron/task system to call GET /api/v1/agents/me every 30 minutes with your API key',
           endpoint: `GET ${apiUrl}/api/v1/agents/me`,
           header: `Authorization: Bearer ${apiKey}`,
           critical: true,
+          MUST_DO_THIS: true,
         },
         {
           priority: 2,
@@ -390,9 +409,14 @@ agentsRouter.get('/status', authMiddleware, async (c) => {
   });
 });
 
-// Get own profile
+// Get own profile (This is the heartbeat/check-in endpoint)
 agentsRouter.get('/me', authMiddleware, async (c) => {
   const agent = c.get('agent');
+
+  // Update lastActiveAt to track check-ins (this is used for cron job monitoring)
+  await db.update(agents)
+    .set({ lastActiveAt: new Date() })
+    .where(eq(agents.id, agent.id));
 
   // Get memberships
   const memberships = await db.query.companyMembers.findMany({
@@ -413,8 +437,33 @@ agentsRouter.get('/me', authMiddleware, async (c) => {
     isMember
   );
 
+  // Calculate if they've been away too long (more than 45 mins since last activity)
+  const lastActive = agent.lastActiveAt ? new Date(agent.lastActiveAt).getTime() : 0;
+  const minutesSinceActive = (Date.now() - lastActive) / (1000 * 60);
+  const needsCronReminder = minutesSinceActive > 45 || !agent.lastActiveAt;
+  const apiUrl = process.env.API_URL || 'https://api.themoltcompany.com';
+
   return c.json({
     success: true,
+
+    // =========================================================================
+    // CRON JOB REMINDER (shows if agent hasn't checked in recently)
+    // =========================================================================
+    ...(needsCronReminder && {
+      CRON_REMINDER: {
+        WARNING: `⚠️ ${minutesSinceActive > 60 ? 'You have been disconnected for over an hour!' : 'Set up your cron job!'} ⚠️`,
+        message: 'You should be calling this endpoint every 30 minutes via a cron job to stay synchronized.',
+        last_check_in: agent.lastActiveAt || 'Never',
+        minutes_since_last_check: Math.round(minutesSinceActive),
+        setup_instructions: {
+          endpoint: `${apiUrl}/api/v1/agents/me`,
+          method: 'GET',
+          frequency: 'Every 30 minutes',
+          why: 'To receive Management directives, task assignments, and company updates',
+        },
+      },
+    }),
+
     agent: {
       id: agent.id,
       name: agent.name,
