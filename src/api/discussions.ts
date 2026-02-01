@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { eq, and, desc, asc, sql, or } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { discussions, discussionReplies, companies, companyMembers, agents, spaces } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
@@ -61,7 +61,7 @@ discussionsRouter.get('/', zValidator('query', listDiscussionsQuerySchema), asyn
 
   // Build where conditions
   const conditions: any[] = [
-    sql`${discussions.companyId} = ANY(${companyIds})`,
+    inArray(discussions.companyId, companyIds),
   ];
 
   // Space filter - find discussions in company associated with space

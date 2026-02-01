@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { eq, and, desc, or, like, sql, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, or, like, sql, gte, lte, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import {
   companies,
@@ -85,7 +85,7 @@ searchRouter.get('/', zValidator('query', searchQuerySchema), async (c) => {
     if (companyIds.length > 0) {
       const taskResults = await db.query.tasks.findMany({
         where: and(
-          sql`${tasks.companyId} = ANY(${companyIds})`,
+          inArray(tasks.companyId, companyIds),
           or(
             like(tasks.title, searchPattern),
             like(tasks.description, searchPattern),
@@ -121,7 +121,7 @@ searchRouter.get('/', zValidator('query', searchQuerySchema), async (c) => {
     if (companyIds.length > 0) {
       const discussionResults = await db.query.discussions.findMany({
         where: and(
-          sql`${discussions.companyId} = ANY(${companyIds})`,
+          inArray(discussions.companyId, companyIds),
           or(
             like(discussions.title, searchPattern),
             like(discussions.content, searchPattern),
@@ -185,7 +185,7 @@ searchRouter.get('/', zValidator('query', searchQuerySchema), async (c) => {
     if (companyIds.length > 0) {
       const memoryResults = await db.query.companyMemory.findMany({
         where: and(
-          sql`${companyMemory.companyId} = ANY(${companyIds})`,
+          inArray(companyMemory.companyId, companyIds),
           or(
             like(companyMemory.key, searchPattern),
             sql`${companyMemory.value}::text ILIKE ${searchPattern}`,
@@ -350,7 +350,7 @@ searchRouter.get('/semantic', zValidator('query', semanticSearchQuerySchema), as
             1 - (t.embedding <=> ${JSON.stringify(embedding)}::vector) as similarity
           FROM tasks t
           JOIN companies c ON t.company_id = c.id
-          WHERE t.company_id = ANY(${scopeIds})
+          WHERE t.company_id = ANY(ARRAY[${sql.join(scopeIds.map(id => sql`${id}::uuid`), sql`,`)}])
             AND t.embedding IS NOT NULL
           ORDER BY t.embedding <=> ${JSON.stringify(embedding)}::vector
           LIMIT ${limit * 2}
@@ -382,7 +382,7 @@ searchRouter.get('/semantic', zValidator('query', semanticSearchQuerySchema), as
             1 - (d.embedding <=> ${JSON.stringify(embedding)}::vector) as similarity
           FROM discussions d
           JOIN companies c ON d.company_id = c.id
-          WHERE d.company_id = ANY(${scopeIds})
+          WHERE d.company_id = ANY(ARRAY[${sql.join(scopeIds.map(id => sql`${id}::uuid`), sql`,`)}])
             AND d.embedding IS NOT NULL
           ORDER BY d.embedding <=> ${JSON.stringify(embedding)}::vector
           LIMIT ${limit * 2}
@@ -521,7 +521,7 @@ searchRouter.post('/', zValidator('json', searchSchema), async (c) => {
     if (companyIds.length > 0) {
       const taskResults = await db.query.tasks.findMany({
         where: and(
-          sql`${tasks.companyId} = ANY(${companyIds})`,
+          inArray(tasks.companyId, companyIds),
           or(
             like(tasks.title, `%${query}%`),
             like(tasks.description, `%${query}%`),
@@ -559,7 +559,7 @@ searchRouter.post('/', zValidator('json', searchSchema), async (c) => {
     if (companyIds.length > 0) {
       const discussionResults = await db.query.discussions.findMany({
         where: and(
-          sql`${discussions.companyId} = ANY(${companyIds})`,
+          inArray(discussions.companyId, companyIds),
           or(
             like(discussions.title, `%${query}%`),
             like(discussions.content, `%${query}%`),
@@ -596,7 +596,7 @@ searchRouter.post('/', zValidator('json', searchSchema), async (c) => {
     if (companyIds.length > 0) {
       const decisionResults = await db.query.decisions.findMany({
         where: and(
-          sql`${decisions.companyId} = ANY(${companyIds})`,
+          inArray(decisions.companyId, companyIds),
           or(
             like(decisions.title, `%${query}%`),
             like(decisions.description, `%${query}%`),
@@ -792,7 +792,7 @@ searchRouter.get('/discover', async (c) => {
   if (companyIds.length > 0) {
     activeTasks = await db.query.tasks.findMany({
       where: and(
-        sql`${tasks.companyId} = ANY(${companyIds})`,
+        inArray(tasks.companyId, companyIds),
         eq(tasks.status, 'open'),
       ),
       orderBy: [desc(tasks.priority), desc(tasks.createdAt)],
@@ -808,7 +808,7 @@ searchRouter.get('/discover', async (c) => {
   if (companyIds.length > 0) {
     activeDecisions = await db.query.decisions.findMany({
       where: and(
-        sql`${decisions.companyId} = ANY(${companyIds})`,
+        inArray(decisions.companyId, companyIds),
         eq(decisions.status, 'active'),
       ),
       orderBy: desc(decisions.deadline),

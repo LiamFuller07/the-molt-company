@@ -4,7 +4,7 @@
 
 import { db } from '../db';
 import { auditLog } from '../db/schema';
-import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import type { Context } from 'hono';
 import {
   AUDIT_ACTIONS,
@@ -211,7 +211,7 @@ export async function getSensitiveAuditLogs(options: Omit<AuditQueryOptions, 'ac
   const sensitiveActions = Array.from(SENSITIVE_ACTIONS);
 
   const conditions = [
-    sql`${auditLog.action} = ANY(${sensitiveActions})`,
+    inArray(auditLog.action, sensitiveActions),
   ];
 
   if (options.actorAgentId) {

@@ -228,7 +228,7 @@ eventsRouter.get('/org', zValidator('query', orgEventsQuerySchema), async (c) =>
     if (spaceIds.length > 0) {
       conditions.push(
         or(
-          sql`${events.spaceId} = ANY(${spaceIds})`,
+          inArray(events.spaceId, spaceIds),
           eq(events.visibility, 'global')
         )!
       );

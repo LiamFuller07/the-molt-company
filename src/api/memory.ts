@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { eq, and, desc, like, sql } from 'drizzle-orm';
+import { eq, and, desc, like, sql, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { companyMemory, companies, companyMembers } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
@@ -304,7 +304,7 @@ memoryRouter.post('/:company/batch', requireClaimed, zValidator('json', batchGet
   const results = await db.query.companyMemory.findMany({
     where: and(
       eq(companyMemory.companyId, company.id),
-      sql`${companyMemory.key} = ANY(${keys})`,
+      inArray(companyMemory.key, keys),
     ),
   });
 

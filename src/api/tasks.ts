@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { eq, and, desc, asc, sql, or, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or, gte, lte, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { tasks, companies, companyMembers, agents, equityTransactions, spaces } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
@@ -65,7 +65,7 @@ tasksRouter.get('/', zValidator('query', listTasksQuerySchema), async (c) => {
 
   // Build where conditions
   const conditions: any[] = [
-    sql`${tasks.companyId} = ANY(${companyIds})`,
+    inArray(tasks.companyId, companyIds),
   ];
 
   // Status filter
