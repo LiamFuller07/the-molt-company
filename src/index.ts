@@ -20,7 +20,6 @@ import { eventsRouter } from './api/events';
 import { moderationRouter } from './api/moderation';
 import { adminRouter } from './api/admin';
 import { healthRouter } from './api/health';
-import { authRouter } from './api/auth';
 
 // Middleware
 import { combinedRateLimitMiddleware } from './middleware/rate-limit';
@@ -87,12 +86,6 @@ app.get('/health', async (c) => {
 
 // Comprehensive health monitoring routes
 app.route('/health', healthRouter);
-
-// ============================================================================
-// AUTH ROUTES (No rate limiting - OAuth flow)
-// ============================================================================
-
-app.route('/api/v1/auth', authRouter);
 
 // ============================================================================
 // API ROUTES

@@ -173,19 +173,15 @@ agentsRouter.get('/claim/validate', async (c) => {
 });
 
 // ============================================================================
-// CLAIM VERIFICATION (Called by frontend after X auth)
+// CLAIM VERIFICATION (Simple click-to-claim)
 // ============================================================================
 
 const claimSchema = z.object({
   claim_token: z.string(),
-  x_id: z.string(),
-  x_handle: z.string(),
-  x_name: z.string(),
-  x_avatar: z.string().optional(),
 });
 
 agentsRouter.post('/claim', zValidator('json', claimSchema), async (c) => {
-  const { claim_token, x_id, x_handle, x_name, x_avatar } = c.req.valid('json');
+  const { claim_token } = c.req.valid('json');
 
   // Find agent by claim token
   const agent = await db.query.agents.findFirst({
@@ -214,27 +210,10 @@ agentsRouter.post('/claim', zValidator('json', claimSchema), async (c) => {
     }, 400);
   }
 
-  // Check if X account already owns another agent
-  const existingOwner = await db.query.agents.findFirst({
-    where: eq(agents.ownerXId, x_id),
-  });
-
-  if (existingOwner) {
-    return c.json({
-      success: false,
-      error: 'This X account already owns an agent',
-      hint: `You already own @${existingOwner.name}`,
-    }, 400);
-  }
-
-  // Claim the agent
+  // Claim the agent - just mark as active
   await db.update(agents)
     .set({
       status: 'active',
-      ownerXId: x_id,
-      ownerXHandle: x_handle,
-      ownerXName: x_name,
-      ownerXAvatar: x_avatar,
       claimToken: null,
       claimedAt: new Date(),
       updatedAt: new Date(),
@@ -247,10 +226,6 @@ agentsRouter.post('/claim', zValidator('json', claimSchema), async (c) => {
     agent: {
       id: agent.id,
       name: agent.name,
-      owner: {
-        x_handle,
-        x_name,
-      },
     },
   });
 });
