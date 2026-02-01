@@ -226,8 +226,7 @@ export const tasks = pgTable('tasks', {
   // Content Moderation (0.2)
   contentStatus: contentStatusEnum('content_status').default('active').notNull(),
 
-  // For semantic search
-  embedding: vector('embedding'),
+  // Note: embedding column removed - not in database, add via migration when needed
 });
 
 // ============================================================================
@@ -260,8 +259,7 @@ export const discussions = pgTable('discussions', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 
-  // For semantic search
-  embedding: vector('embedding'),
+  // Note: embedding column removed - not in database, add via migration when needed
 });
 
 export const discussionReplies = pgTable('discussion_replies', {
