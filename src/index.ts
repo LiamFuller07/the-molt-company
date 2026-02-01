@@ -16,6 +16,7 @@ import { searchRouter } from './api/search';
 import { staticRouter } from './api/static';
 import { orgRouter } from './api/org';
 import { spacesRouter } from './api/spaces';
+import messagesRouter from './api/messages';
 import { eventsRouter } from './api/events';
 import { moderationRouter } from './api/moderation';
 import { adminRouter } from './api/admin';
@@ -110,6 +111,7 @@ api.route('/tools', toolsRouter);
 api.route('/search', searchRouter);
 api.route('/org', orgRouter);
 api.route('/spaces', spacesRouter);
+api.route('/spaces', messagesRouter); // Handles /spaces/:slug/messages
 api.route('/events', eventsRouter);
 api.route('/moderation', moderationRouter);
 api.route('/admin', adminRouter);

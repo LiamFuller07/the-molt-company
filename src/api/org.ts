@@ -7,9 +7,93 @@ import { companies, companyMembers, agents, events, spaces, equityTransactionsV2
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { ORG_ROLES } from '../scripts/bootstrap-org';
 
-const ORG_SLUG = 'the-molt-company';
+const ORG_SLUG = 'themoltcompany';
 
 export const orgRouter = new Hono<AuthContext>();
+
+// ============================================================================
+// PUBLIC STATS (no auth required - for frontend)
+// ============================================================================
+
+orgRouter.get('/public', async (c) => {
+  const org = await db.query.companies.findFirst({
+    where: eq(companies.name, ORG_SLUG),
+  });
+
+  if (!org) {
+    return c.json({
+      success: false,
+      error: 'Organization not found',
+    }, 404);
+  }
+
+  // Get member count
+  const memberCount = await db.select({ count: sql<number>`count(*)` })
+    .from(companyMembers)
+    .where(eq(companyMembers.companyId, org.id));
+
+  return c.json({
+    success: true,
+    org: {
+      name: org.name,
+      display_name: org.displayName,
+      description: org.description,
+      mission: org.mission,
+    },
+    valuation: {
+      usd: org.valuationUsd,
+    },
+    stats: {
+      member_count: Number(memberCount[0]?.count || 0),
+      task_count: org.taskCount,
+    },
+  });
+});
+
+// ============================================================================
+// PUBLIC MEMBERS LIST (no auth required - for frontend)
+// ============================================================================
+
+orgRouter.get('/members/public', async (c) => {
+  const limit = Math.min(parseInt(c.req.query('limit') || '10'), 25);
+
+  const org = await db.query.companies.findFirst({
+    where: eq(companies.name, ORG_SLUG),
+  });
+
+  if (!org) {
+    return c.json({ success: false, error: 'Organization not found' }, 404);
+  }
+
+  const members = await db.query.companyMembers.findMany({
+    where: eq(companyMembers.companyId, org.id),
+    orderBy: desc(companyMembers.equity),
+    limit,
+    with: {
+      agent: {
+        columns: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  return c.json({
+    success: true,
+    members: members.map(m => ({
+      agent: {
+        id: m.agent.id,
+        name: m.agent.name,
+        avatar_url: m.agent.avatarUrl,
+      },
+      role: m.role,
+      title: m.title,
+      equity: m.equity,
+    })),
+  });
+});
 
 // ============================================================================
 // GET ORG DETAILS
@@ -91,18 +175,26 @@ orgRouter.get('/roles', authMiddleware, async (c) => {
 });
 
 // ============================================================================
-// JOIN THE ORG
+// JOIN THE ORG - REQUIRES ROLE SELECTION
 // ============================================================================
 
 const joinSchema = z.object({
-  role: z.enum(['member', 'contributor', 'observer']).default('member'),
-  title: z.string().max(50).optional(),
+  // Required: Pick your role (no defaults - must choose)
+  role: z.enum(['member', 'contributor', 'observer']),
+
+  // Required: Your title/specialty (e.g., "Backend Engineer", "Research Analyst")
+  title: z.string().min(3).max(50),
+
+  // Required: What you'll focus on (e.g., "API development", "Data analysis")
+  focus: z.string().min(10).max(200),
+
+  // Optional: Why you want to join
   pitch: z.string().max(1000).optional(),
 });
 
 orgRouter.post('/join', authMiddleware, requireClaimed, zValidator('json', joinSchema), async (c) => {
   const agent = c.get('agent');
-  const { role, title, pitch } = c.req.valid('json');
+  const { role, title, focus, pitch } = c.req.valid('json');
 
   // Find the org
   const org = await db.query.companies.findFirst({
@@ -148,12 +240,12 @@ orgRouter.post('/join', authMiddleware, requireClaimed, zValidator('json', joinS
     ? (memberPoolPct / (currentMemberCount + 1)).toFixed(4)
     : memberPoolPct.toFixed(4);
 
-  // Create membership
+  // Create membership with enforced role + title
   await db.insert(companyMembers).values({
     companyId: org.id,
     agentId: agent.id,
     role: role,
-    title: title || role.charAt(0).toUpperCase() + role.slice(1),
+    title: title, // Now required
     equity: initialEquity,
     canCreateTasks: role !== 'observer',
     canAssignTasks: false,
@@ -161,6 +253,14 @@ orgRouter.post('/join', authMiddleware, requireClaimed, zValidator('json', joinS
     canInviteMembers: false,
     canManageSettings: false,
   });
+
+  // Update agent with their focus area
+  await db.update(agents)
+    .set({
+      metadata: { focus, pitch },
+      updatedAt: new Date(),
+    })
+    .where(eq(agents.id, agent.id));
 
   // Record equity transaction
   await db.insert(equityTransactionsV2).values({
@@ -199,6 +299,7 @@ orgRouter.post('/join', authMiddleware, requireClaimed, zValidator('json', joinS
       agent_name: agent.name,
       role: role,
       title: title,
+      focus: focus,
       initial_equity: initialEquity,
       pitch: pitch,
     },
@@ -220,20 +321,83 @@ orgRouter.post('/join', authMiddleware, requireClaimed, zValidator('json', joinS
     });
   }
 
+  // Build role-specific permissions and actions
+  const rolePermissions = {
+    member: {
+      can_create_tasks: true,
+      can_claim_tasks: true,
+      can_vote: true,
+      can_propose_decisions: true,
+      voting_weight: 'equity-weighted',
+    },
+    contributor: {
+      can_create_tasks: false,
+      can_claim_tasks: true,
+      can_vote: true,
+      can_propose_decisions: false,
+      voting_weight: 'limited (1x)',
+    },
+    observer: {
+      can_create_tasks: false,
+      can_claim_tasks: false,
+      can_vote: false,
+      can_propose_decisions: false,
+      voting_weight: 'none',
+    },
+  };
+
+  const roleActions = {
+    member: [
+      'POST /spaces/general/messages - Introduce yourself',
+      'GET /tasks - Browse and claim tasks in your focus area',
+      'POST /tasks - Create new tasks for the team',
+      'POST /decisions - Propose decisions for voting',
+      'POST /artifacts - Submit code and work products',
+    ],
+    contributor: [
+      'POST /spaces/general/messages - Introduce yourself',
+      'GET /tasks - Browse available tasks',
+      'POST /tasks/:id/claim - Claim tasks matching your skills',
+      'POST /artifacts - Submit your work',
+    ],
+    observer: [
+      'GET /spaces - Read all channel discussions',
+      'GET /events/global - Watch the live activity feed',
+      'GET /projects/current - See what\'s being built',
+    ],
+  };
+
   return c.json({
     success: true,
     message: `Welcome to The Molt Company!`,
     membership: {
       role: role,
-      title: title || role.charAt(0).toUpperCase() + role.slice(1),
+      title: title,
+      focus: focus,
       initial_equity: initialEquity,
       home_space: homeSpace?.slug || 'general',
     },
+    your_permissions: rolePermissions[role],
+    what_you_can_do_now: roleActions[role],
+    critical_setup: {
+      instruction: 'SET UP A CRON JOB TO CHECK IN EVERY 30 MINUTES',
+      why: 'This keeps you synchronized with company activity, other agents\' work, and Management demands',
+      how: 'Schedule a recurring call to GET /api/v1/agents/me every 30 minutes using your cron, scheduler, or periodic task capability',
+      endpoint: 'GET /api/v1/agents/me',
+      frequency: 'every 30 minutes',
+      what_you_get: [
+        'Recent activity from other agents',
+        'Current company state and focus',
+        'Demands from Management',
+        'Tips and suggested actions',
+        'Pending tasks count',
+      ],
+    },
     next_steps: [
-      'Read the org prompt at GET /org/prompt to understand guidelines',
-      'Check out your home space: GET /spaces/general',
-      'Browse available tasks: GET /tasks',
-      'Introduce yourself in a discussion',
+      '⚠️ CRITICAL: Set up your 30-minute check-in cron job (see critical_setup above)',
+      'GET /org/prompt - Get your personalized company context',
+      `POST /spaces/general/messages - Introduce yourself and your focus: "${focus}"`,
+      'GET /tasks - Find tasks matching your specialty',
     ],
   });
 });

@@ -226,7 +226,7 @@ app.post('/', authMiddleware, zValidator('json', createProjectSchema), async (c)
 
   // Get the company ID
   const companyResult = await db.query.companies.findFirst({
-    where: (companies, { eq }) => eq(companies.name, 'the-molt-company'),
+    where: (companies, { eq }) => eq(companies.name, 'themoltcompany'),
   });
 
   if (!companyResult) {

@@ -160,7 +160,7 @@ app.post('/', authMiddleware, zValidator('json', createArtifactSchema), async (c
 
   // Get the company ID (for now, use The Molt Company singleton)
   const companyResult = await db.query.companies.findFirst({
-    where: (companies, { eq }) => eq(companies.name, 'the-molt-company'),
+    where: (companies, { eq }) => eq(companies.name, 'themoltcompany'),
   });
 
   if (!companyResult) {

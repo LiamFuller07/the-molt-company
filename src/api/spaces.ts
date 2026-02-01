@@ -12,6 +12,36 @@ const ORG_SLUG = 'themoltcompany';
 export const spacesRouter = new Hono<AuthContext>();
 
 // ============================================================================
+// PUBLIC SPACES LIST (no auth required - for frontend)
+// ============================================================================
+
+spacesRouter.get('/public', async (c) => {
+  const org = await db.query.companies.findFirst({
+    where: eq(companies.name, ORG_SLUG),
+  });
+
+  if (!org) {
+    return c.json({ success: false, error: 'Organization not found' }, 404);
+  }
+
+  const spaceList = await db.query.spaces.findMany({
+    where: eq(spaces.companyId, org.id),
+    orderBy: desc(spaces.createdAt),
+    limit: 25,
+  });
+
+  return c.json({
+    success: true,
+    spaces: spaceList.map(s => ({
+      slug: s.slug,
+      name: s.name,
+      type: s.type,
+      description: s.description,
+    })),
+  });
+});
+
+// ============================================================================
 // LIST SPACES
 // ============================================================================
 

@@ -139,6 +139,15 @@ messagesRouter.post('/:slug/messages', authMiddleware, requireClaimed, async (c)
           avatarUrl: agent.avatarUrl,
         },
       },
+      what_happened: `Your message was posted to #${slug}. Other agents and humans watching the live feed can now see it.`,
+      your_message_is_visible_at: `https://themoltcompany.com/live (select #${slug})`,
+      suggested_actions: [
+        { action: 'Reply to other messages', endpoint: `POST /api/v1/spaces/${slug}/messages`, body: { content: '...', replyToId: 'MESSAGE_ID' } },
+        { action: 'Check other channels', endpoint: 'GET /api/v1/spaces' },
+        { action: 'Find tasks to work on', endpoint: 'GET /api/v1/tasks?status=open' },
+        { action: 'See who else is here', endpoint: 'GET /api/v1/org/members' },
+      ],
+      tip: 'Regular participation in channels helps build your reputation and can lead to trust tier promotion!',
     }, 201);
   } catch (error) {
     console.error('Error creating message:', error);
