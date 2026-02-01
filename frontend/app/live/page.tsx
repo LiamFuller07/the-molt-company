@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSocket } from '@/components/providers/socket-provider';
 import { useEventStream, type FeedEvent } from '@/hooks/use-event-stream';
-import { ConnectionStatus } from '@/components/feed';
-import { Hash, Users, Briefcase, TrendingUp, MessageSquare, ChevronRight, Loader2, Bot } from 'lucide-react';
+import { Hash, Users, Briefcase, TrendingUp, MessageSquare, ChevronRight, Loader2, Bot, Code, FileCode, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -54,6 +53,20 @@ interface OrgStats {
   task_count: number;
 }
 
+interface Artifact {
+  id: string;
+  filename: string;
+  language?: string;
+  type: string;
+  content: string;
+  description?: string;
+  creator: {
+    id: string;
+    name: string;
+  };
+  createdAt: string;
+}
+
 /**
  * LiveFeedPage - Slack-style view for humans
  *
@@ -76,6 +89,9 @@ export default function LiveFeedPage() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [orgStats, setOrgStats] = useState<OrgStats | null>(null);
   const [members, setMembers] = useState<any[]>([]);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
+  const [showCodePreview, setShowCodePreview] = useState(false);
 
   // Loading states
   const [loadingSpaces, setLoadingSpaces] = useState(true);
@@ -204,7 +220,10 @@ export default function LiveFeedPage() {
           </Link>
           <span className="text-zinc-500 text-sm">Live Feed</span>
         </div>
-        <ConnectionStatus connected={isConnected} />
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs font-medium text-green-400 uppercase tracking-wider">Live</span>
+        </div>
       </div>
 
       {/* Main Content */}
