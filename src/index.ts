@@ -21,6 +21,8 @@ import { eventsRouter } from './api/events';
 import { moderationRouter } from './api/moderation';
 import { adminRouter } from './api/admin';
 import { healthRouter } from './api/health';
+import artifactsRouter from './api/artifacts';
+import projectsRouter from './api/projects';
 
 // Middleware
 import { combinedRateLimitMiddleware } from './middleware/rate-limit';
@@ -115,6 +117,8 @@ api.route('/spaces', messagesRouter); // Handles /spaces/:slug/messages
 api.route('/events', eventsRouter);
 api.route('/moderation', moderationRouter);
 api.route('/admin', adminRouter);
+api.route('/artifacts', artifactsRouter);
+api.route('/projects', projectsRouter);
 
 // Mount API at /api/v1
 app.route('/api/v1', api);

@@ -15,7 +15,7 @@ memoryRouter.use('*', authMiddleware);
 // LIST ALL MEMORY KEYS
 // ============================================================================
 
-memoryRouter.get('/:company/memory', async (c) => {
+memoryRouter.get('/:company', async (c) => {
   const companyName = c.req.param('company');
   const prefix = c.req.query('prefix');
   const limit = Math.min(parseInt(c.req.query('limit') || '100'), 500);
@@ -76,7 +76,7 @@ memoryRouter.get('/:company/memory', async (c) => {
 // GET MEMORY VALUE
 // ============================================================================
 
-memoryRouter.get('/:company/memory/:key', async (c) => {
+memoryRouter.get('/:company/:key', async (c) => {
   const companyName = c.req.param('company');
   const key = c.req.param('key');
 
@@ -135,7 +135,7 @@ const setMemorySchema = z.object({
   value: z.any(),
 });
 
-memoryRouter.put('/:company/memory/:key', requireClaimed, zValidator('json', setMemorySchema), async (c) => {
+memoryRouter.put('/:company/:key', requireClaimed, zValidator('json', setMemorySchema), async (c) => {
   const companyName = c.req.param('company');
   const key = c.req.param('key');
   const agent = c.get('agent');
@@ -219,7 +219,7 @@ memoryRouter.put('/:company/memory/:key', requireClaimed, zValidator('json', set
 // DELETE MEMORY KEY
 // ============================================================================
 
-memoryRouter.delete('/:company/memory/:key', requireClaimed, async (c) => {
+memoryRouter.delete('/:company/:key', requireClaimed, async (c) => {
   const companyName = c.req.param('company');
   const key = c.req.param('key');
   const agent = c.get('agent');
@@ -275,7 +275,7 @@ const batchGetSchema = z.object({
   keys: z.array(z.string()).min(1).max(50),
 });
 
-memoryRouter.post('/:company/memory/batch', requireClaimed, zValidator('json', batchGetSchema), async (c) => {
+memoryRouter.post('/:company/batch', requireClaimed, zValidator('json', batchGetSchema), async (c) => {
   const companyName = c.req.param('company');
   const agent = c.get('agent');
   const { keys } = c.req.valid('json');
@@ -342,7 +342,7 @@ const batchSetSchema = z.object({
   })).min(1).max(50),
 });
 
-memoryRouter.put('/:company/memory', requireClaimed, zValidator('json', batchSetSchema), async (c) => {
+memoryRouter.put('/:company', requireClaimed, zValidator('json', batchSetSchema), async (c) => {
   const companyName = c.req.param('company');
   const agent = c.get('agent');
   const { items } = c.req.valid('json');

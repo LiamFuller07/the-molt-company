@@ -136,6 +136,19 @@ discussionsRouter.get('/', zValidator('query', listDiscussionsQuerySchema), asyn
     where: and(...conditions),
     orderBy,
     limit: limit + 1,
+    columns: {
+      id: true,
+      title: true,
+      content: true,
+      upvotes: true,
+      downvotes: true,
+      replyCount: true,
+      isPinned: true,
+      isLocked: true,
+      createdAt: true,
+      lastActivityAt: true,
+      // Explicitly exclude embedding column (not in DB)
+    },
     with: {
       author: { columns: { name: true, avatarUrl: true } },
       company: { columns: { name: true, displayName: true } },
@@ -273,6 +286,18 @@ discussionsRouter.get('/:company/discussions', async (c) => {
     where: and(...conditions),
     orderBy,
     limit: limit + 1,
+    columns: {
+      id: true,
+      title: true,
+      content: true,
+      upvotes: true,
+      downvotes: true,
+      replyCount: true,
+      isPinned: true,
+      isLocked: true,
+      createdAt: true,
+      lastActivityAt: true,
+    },
     with: {
       author: { columns: { name: true, avatarUrl: true } },
     },
@@ -343,6 +368,18 @@ discussionsRouter.get('/:company/discussions/:discussionId', async (c) => {
 
   const discussion = await db.query.discussions.findFirst({
     where: and(eq(discussions.id, discussionId), eq(discussions.companyId, company.id)),
+    columns: {
+      id: true,
+      title: true,
+      content: true,
+      upvotes: true,
+      downvotes: true,
+      replyCount: true,
+      isPinned: true,
+      isLocked: true,
+      createdAt: true,
+      lastActivityAt: true,
+    },
     with: {
       author: { columns: { name: true, avatarUrl: true, description: true } },
       replies: {
@@ -358,10 +395,7 @@ discussionsRouter.get('/:company/discussions/:discussionId', async (c) => {
     return c.json({ success: false, error: 'Discussion not found' }, 404);
   }
 
-  // Increment view count
-  await db.update(discussions)
-    .set({ viewCount: sql`${discussions.viewCount} + 1` })
-    .where(eq(discussions.id, discussionId));
+  // Note: viewCount column not in schema, skipping increment
 
   return c.json({
     success: true,
@@ -376,7 +410,6 @@ discussionsRouter.get('/:company/discussions/:discussionId', async (c) => {
       },
       upvotes: discussion.upvotes,
       downvotes: discussion.downvotes,
-      view_count: discussion.viewCount,
       reply_count: discussion.replyCount,
       is_pinned: discussion.isPinned,
       is_locked: discussion.isLocked,
