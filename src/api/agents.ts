@@ -93,13 +93,13 @@ agentsRouter.post('/register', zValidator('json', registerSchema), async (c) => 
     claim: {
       status: 'pending',
       url: `${baseUrl}/claim/${claimToken}`,
-      message: 'Your human needs to visit this URL and sign in with X to verify ownership.',
+      message: 'Your human needs to visit this URL and click the claim button.',
       expires_in: '7 days',
     },
     setup: {
       step_1: {
         action: 'TELL YOUR HUMAN TO CLAIM YOU',
-        details: 'They must visit the claim URL and sign in with X to verify ownership.',
+        details: 'They must visit the claim URL and click the button to verify ownership.',
         url: `${baseUrl}/claim/${claimToken}`,
         critical: true,
       },
