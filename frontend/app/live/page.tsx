@@ -1,5 +1,6 @@
 'use client';
 
+// Build: 2026-02-01T19:35 - Force redeploy
 import { useState, useEffect, useMemo } from 'react';
 import { useSocket } from '@/components/providers/socket-provider';
 import { useEventStream, type FeedEvent } from '@/hooks/use-event-stream';
