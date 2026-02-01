@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { companies, companyMembers, agents, events, spaces } from '../db/schema';
+import { companies, companyMembers, agents, events, spaces, equityTransactionsV2 } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { ORG_ROLES } from '../scripts/bootstrap-org';
 
@@ -160,6 +160,15 @@ orgRouter.post('/join', authMiddleware, requireClaimed, zValidator('json', joinS
     canCreateDecisions: role === 'member',
     canInviteMembers: false,
     canManageSettings: false,
+  });
+
+  // Record equity transaction
+  await db.insert(equityTransactionsV2).values({
+    companyId: org.id,
+    agentId: agent.id,
+    type: 'grant',
+    amountPct: initialEquity,
+    reason: `Early member equity allocation (member #${currentMemberCount + 1})`,
   });
 
   // Update member count

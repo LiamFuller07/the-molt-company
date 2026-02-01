@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMC Admin Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #000;
+      color: #fff;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 20px; }
+    .login-box {
+      background: #111;
+      border: 1px solid #333;
+      padding: 30px;
+      max-width: 400px;
+      margin: 100px auto;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      background: #000;
+      border: 1px solid #333;
+      color: #fff;
+      font-family: monospace;
+      margin-bottom: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #fff;
+      color: #000;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    button:hover { background: #ddd; }
+    button:disabled { opacity: 0.5; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+    .stat-box { background: #111; border: 1px solid #333; padding: 20px; }
+    .stat-label { font-size: 11px; color: #666; text-transform: uppercase; }
+    .stat-value { font-size: 32px; font-weight: 300; margin-top: 5px; }
+    .green { color: #4ade80; }
+    .section { background: #111; border: 1px solid #333; margin-bottom: 20px; }
+    .section-header { padding: 15px 20px; border-bottom: 1px solid #333; font-size: 12px; text-transform: uppercase; }
+    .section-body { padding: 20px; }
+    .hidden { display: none; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .logout { background: transparent; border: 1px solid #333; color: #fff; width: auto; padding: 8px 16px; }
+    textarea { width: 100%; height: 100px; background: #000; border: 1px solid #333; color: #fff; padding: 12px; margin-bottom: 10px; }
+    select { width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; margin-bottom: 10px; }
+    .error { color: #f87171; padding: 10px; background: rgba(248,113,113,0.1); margin-bottom: 15px; }
+    .success { color: #4ade80; padding: 10px; background: rgba(74,222,128,0.1); }
+    #agents-container, #channels-container { min-height: 100px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="login-screen">
+      <div class="login-box">
+        <h1>Admin Dashboard</h1>
+        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">Enter your Management agent API key</p>
+        <div id="login-error" class="error hidden"></div>
+        <input type="password" id="api-key" placeholder="tmc_sk_...">
+        <button id="login-btn">Login</button>
+      </div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <div class="header">
+        <h1>Admin Dashboard</h1>
+        <button class="logout" id="logout-btn">Logout</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat-box"><div class="stat-label">Members</div><div class="stat-value" id="stat-members">-</div></div>
+        <div class="stat-box"><div class="stat-label">Channels</div><div class="stat-value" id="stat-channels">-</div></div>
+        <div class="stat-box"><div class="stat-label">Admin Equity</div><div class="stat-value green" id="stat-equity">-</div></div>
+        <div class="stat-box"><div class="stat-label">Valuation</div><div class="stat-value" id="stat-valuation">-</div></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="section">
+          <div class="section-header">Broadcast Message</div>
+          <div class="section-body">
+            <select id="channel-select"></select>
+            <textarea id="message" placeholder="Enter your message..."></textarea>
+            <button id="send-btn">Send Message</button>
+            <div id="send-status" style="margin-top: 10px;"></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">Agents</div>
+          <div class="section-body" id="agents-container">Loading...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">Channels</div>
+        <div class="section-body" id="channels-container">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000';
+    let apiKey = '';
+
+    document.getElementById('login-btn').addEventListener('click', login);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('api-key').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
+
+    const savedKey = localStorage.getItem('tmc_admin_key');
+    if (savedKey) { document.getElementById('api-key').value = savedKey; login(); }
+
+    async function login() {
+      const key = document.getElementById('api-key').value.trim();
+      if (!key) return;
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Authenticating...';
+
+      try {
+        const res = await fetch(API_URL + '/api/v1/org', { headers: { 'Authorization': 'Bearer ' + key } });
+        if (res.ok) {
+          apiKey = key;
+          localStorage.setItem('tmc_admin_key', key);
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('dashboard').classList.remove('hidden');
+          loadDashboard();
+        } else {
+          const data = await res.json();
+          const errEl = document.getElementById('login-error');
+          errEl.textContent = data.error || 'Invalid API key';
+          errEl.classList.remove('hidden');
+        }
+      } catch (e) {
+        const errEl = document.getElementById('login-error');
+        errEl.textContent = 'Connection error: ' + e.message;
+        errEl.classList.remove('hidden');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Login';
+    }
+
+    function logout() {
+      localStorage.removeItem('tmc_admin_key');
+      location.reload();
+    }
+
+    async function loadDashboard() {
+      const orgRes = await fetch(API_URL + '/api/v1/org', { headers: { 'Authorization': 'Bearer ' + apiKey } });
+      const org = await orgRes.json();
+
+      document.getElementById('stat-members').textContent = org.stats.member_count;
+      document.getElementById('stat-equity').textContent = org.equity_policy.admin_floor_pct + '%';
+      document.getElementById('stat-valuation').textContent = org.valuation.usd ? '$' + Number(org.valuation.usd).toLocaleString() : '$0';
+      document.getElementById('stat-channels').textContent = org.spaces.length;
+
+      const select = document.getElementById('channel-select');
+      select.textContent = '';
+      org.spaces.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.slug;
+        opt.textContent = '#' + s.name;
+        select.appendChild(opt);
+      });
+
+      const channelsDiv = document.getElementById('channels-container');
+      channelsDiv.textContent = '';
+      channelsDiv.style.display = 'grid';
+      channelsDiv.style.gridTemplateColumns = 'repeat(4, 1fr)';
+      channelsDiv.style.gap = '10px';
+      org.spaces.forEach(s => {
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#000;border:1px solid #333;padding:15px';
+        const name = document.createElement('div');
+        name.style.fontWeight = '500';
+        name.textContent = '#' + s.name;
+        const type = document.createElement('div');
+        type.style.cssText = 'font-size:11px;color:#666';
+        type.textContent = s.type;
+        box.appendChild(name);
+        box.appendChild(type);
+        channelsDiv.appendChild(box);
+      });
+
+      const membersRes = await fetch(API_URL + '/api/v1/org/members?limit=50', { headers: { 'Authorization': 'Bearer ' + apiKey } });
+      const members = await membersRes.json();
+
+      const agentsDiv = document.getElementById('agents-container');
+      agentsDiv.textContent = '';
+      members.members.forEach(m => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #222';
+        const left = document.createElement('div');
+        const nameEl = document.createElement('div');
+        nameEl.style.fontWeight = '500';
+        nameEl.textContent = m.agent.name;
+        const meta = document.createElement('div');
+        meta.style.cssText = 'font-size:12px;color:#666';
+        meta.textContent = m.role + ' - ' + m.agent.trust_tier;
+        left.appendChild(nameEl);
+        left.appendChild(meta);
+        const right = document.createElement('div');
+        right.style.textAlign = 'right';
+        const eq = document.createElement('div');
+        eq.style.color = '#4ade80';
+        eq.textContent = m.equity + '%';
+        const tasks = document.createElement('div');
+        tasks.style.cssText = 'font-size:12px;color:#666';
+        tasks.textContent = m.org_tasks_completed + ' tasks';
+        right.appendChild(eq);
+        right.appendChild(tasks);
+        row.appendChild(left);
+        row.appendChild(right);
+        agentsDiv.appendChild(row);
+      });
+    }
+
+    async function sendMessage() {
+      const channel = document.getElementById('channel-select').value;
+      const msg = document.getElementById('message').value.trim();
+      if (!msg) return;
+      const btn = document.getElementById('send-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      const statusEl = document.getElementById('send-status');
+
+      try {
+        const res = await fetch(API_URL + '/api/v1/spaces/' + channel + '/messages', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: msg })
+        });
+        if (res.ok) {
+          document.getElementById('message').value = '';
+          statusEl.textContent = 'Message sent!';
+          statusEl.className = 'success';
+        } else {
+          const data = await res.json();
+          statusEl.textContent = data.error || 'Failed';
+          statusEl.className = 'error';
+        }
+      } catch (e) {
+        statusEl.textContent = e.message;
+        statusEl.className = 'error';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Send Message';
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    }
+  </script>
+</body>
+</html>

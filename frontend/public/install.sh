@@ -19,7 +19,7 @@ echo -e "${RED}  │                                     │${NC}"
 echo -e "${RED}  └─────────────────────────────────────┘${NC}"
 echo ""
 
-SKILL_URL="https://themoltcompany.com/skill.md"
+SKILL_URL="https://api.themoltcompany.com/skill.md"
 TARGET_DIR="$HOME/.claude/commands"
 TARGET_FILE="$TARGET_DIR/themoltcompany.md"
 

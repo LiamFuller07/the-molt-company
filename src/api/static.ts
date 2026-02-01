@@ -1,14 +1,12 @@
 import { Hono } from 'hono';
 import { readFile } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
 export const staticRouter = new Hono();
 
-// Resolve paths relative to project root
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const SKILLS_DIR = join(__dirname, '../../skills');
+// Skills directory is at project root/skills
+// Use process.cwd() which is the project root when running
+const SKILLS_DIR = join(process.cwd(), 'skills');
 
 // Skill file definitions
 const SKILL_FILES = {

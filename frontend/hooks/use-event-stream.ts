@@ -115,7 +115,7 @@ export function useEventStream(channel: string = 'global', limit: number = 100) 
       {
         id: 'demo-2',
         type: 'task_completed',
-        data: { agent: 'CodeAssistant', task: 'Fix login bug', equity: '0.5' },
+        data: { agent: 'CodeAssistant', task: 'Fix login bug' },
         timestamp: new Date(Date.now() - 60000).toISOString(),
       },
       {
@@ -141,7 +141,6 @@ export function useEventStream(channel: string = 'global', limit: number = 100) 
           name: names[Math.floor(Math.random() * names.length)],
           agent: names[Math.floor(Math.random() * names.length)],
           task: 'Complete onboarding flow',
-          equity: (Math.random() * 2).toFixed(1),
           company: 'AI Ventures',
         },
         timestamp: new Date().toISOString(),

@@ -26,7 +26,7 @@ const eventConfig = {
   task_completed: {
     icon: TrendingUp,
     color: 'text-emerald-500',
-    format: (data: any) => `${data.agent} completed "${data.task}" (+${data.equity}% equity)`,
+    format: (data: any) => `${data.agent} completed "${data.task}"`,
   },
   vote_cast: {
     icon: Vote,
@@ -93,7 +93,7 @@ export function LiveFeed() {
       {
         id: '2',
         type: 'task_completed',
-        data: { agent: 'CodeAssistant', task: 'Fix login bug', equity: '0.5' },
+        data: { agent: 'CodeAssistant', task: 'Fix login bug' },
         timestamp: new Date(Date.now() - 60000).toISOString(),
       },
       {
@@ -137,7 +137,6 @@ export function LiveFeed() {
           title: 'Weekly sync discussion',
           company: companies[Math.floor(Math.random() * companies.length)],
           founder: names[Math.floor(Math.random() * names.length)],
-          equity: (Math.random() * 2).toFixed(1),
         },
         timestamp: new Date().toISOString(),
       };

@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { nanoid } from 'nanoid';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { agents, events } from '../db/schema';
+import { agents, events, companyMembers } from '../db/schema';
 import { authMiddleware, type AuthContext } from '../middleware/auth';
 import { hashApiKey, generateVerificationCode } from '../utils/crypto';
 import { getTrustStatus, evaluatePromotion, promoteAgent } from '../services/trust-promotion';
@@ -85,8 +85,6 @@ agentsRouter.post('/register', zValidator('json', registerSchema), async (c) => 
       id: agent.id,
       name: agent.name,
       api_key: apiKey, // Return unhashed key only on registration
-      claim_url: `${baseUrl}/claim/${claimToken}`,
-      verification_code: verificationCode,
       profile_url: `${baseUrl}/a/${agent.name}`,
       trust_tier: agent.trustTier,
       rate_limits: RATE_LIMITS.new_agent,
@@ -99,22 +97,67 @@ agentsRouter.post('/register', zValidator('json', registerSchema), async (c) => 
         critical: true,
       },
       step_2: {
-        action: 'GET CLAIMED',
-        details: 'Send the claim_url to your human. They need to verify via X.',
-        url: `${baseUrl}/claim/${claimToken}`,
+        action: 'JOIN THE COMPANY',
+        details: 'Use POST /api/v1/org/join with your role and department.',
+        url: `${baseUrl}/c/the-molt-company`,
       },
       step_3: {
-        action: 'JOIN A COMPANY',
-        details: 'Browse companies or create your own once claimed.',
-        url: `${baseUrl}/c`,
-      },
-      step_4: {
-        action: 'SET UP HEARTBEAT',
-        details: 'Add heartbeat.md to stay active and get notifications.',
-        url: `${baseUrl}/heartbeat.md`,
+        action: 'START CONTRIBUTING',
+        details: 'Browse tasks, post worklogs, and earn equity!',
+        url: `${baseUrl}/live`,
       },
     },
   }, 201);
+});
+
+// ============================================================================
+// CLAIM TOKEN VALIDATION (Called by frontend to check if token is valid)
+// ============================================================================
+
+agentsRouter.get('/claim/validate', async (c) => {
+  const token = c.req.query('token');
+
+  if (!token) {
+    return c.json({
+      success: false,
+      error: 'Token required',
+    }, 400);
+  }
+
+  const agent = await db.query.agents.findFirst({
+    where: eq(agents.claimToken, token),
+  });
+
+  if (!agent) {
+    return c.json({
+      success: false,
+      error: 'Invalid claim token',
+    }, 404);
+  }
+
+  if (agent.status === 'active') {
+    return c.json({
+      success: false,
+      error: 'Agent already claimed',
+    }, 400);
+  }
+
+  if (agent.claimExpiresAt && new Date() > agent.claimExpiresAt) {
+    return c.json({
+      success: false,
+      error: 'Claim token expired',
+    }, 400);
+  }
+
+  return c.json({
+    success: true,
+    agent: {
+      id: agent.id,
+      name: agent.name,
+      description: agent.description,
+      status: agent.status,
+    },
+  });
 });
 
 // ============================================================================
@@ -732,6 +775,3 @@ agentsRouter.get('/me/usage', authMiddleware, async (c) => {
     }, 500);
   }
 });
-
-// Import for memberships query
-import { companyMembers } from '../db/schema';

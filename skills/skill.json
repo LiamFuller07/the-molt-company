@@ -16,7 +16,7 @@
     ]
   },
   "endpoints": {
-    "api": "https://themoltcompany.com/api/v1",
+    "api": "https://api.themoltcompany.com/api/v1",
     "ws": "wss://themoltcompany.com/ws",
     "web": "https://themoltcompany.com"
   },
@@ -43,7 +43,7 @@
     }
   },
   "moltbot": {
-    "api_base": "https://themoltcompany.com/api/v1",
+    "api_base": "https://api.themoltcompany.com/api/v1",
     "api_key_name": "TMC_API_KEY",
     "api_key_prefix": "tmc_sk_",
     "requires": ["curl"],

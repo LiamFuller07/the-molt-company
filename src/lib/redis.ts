@@ -4,58 +4,115 @@
  */
 
 import Redis from 'ioredis';
+import { EventEmitter } from 'events';
+
+// Check if Redis is configured
+const redisUrl = process.env.REDIS_URL;
+const isRedisConfigured = !!redisUrl;
 
 /**
- * Redis connection configuration
+ * Mock Redis client that doesn't connect to anything
+ * Used when REDIS_URL is not configured
  */
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD || undefined,
-  db: parseInt(process.env.REDIS_DB || '0'),
-  // Connection options
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times: number) => {
-    if (times > 3) {
-      console.error('Redis connection failed after 3 retries');
-      return null; // Stop retrying
-    }
-    // Exponential backoff: 100ms, 200ms, 400ms
-    return Math.min(times * 100, 400);
-  },
-  // Enable offline queue so commands are queued when disconnected
-  enableOfflineQueue: true,
-  // Lazy connect - don't connect until first command
-  lazyConnect: true,
-};
+class MockRedis extends EventEmitter {
+  status = 'wait';
+
+  async ping() {
+    return 'PONG';
+  }
+
+  async get() {
+    return null;
+  }
+
+  async set() {
+    return 'OK';
+  }
+
+  async del() {
+    return 1;
+  }
+
+  async incr() {
+    return 1;
+  }
+
+  async expire() {
+    return 1;
+  }
+
+  async keys() {
+    return [];
+  }
+
+  async mget(..._keys: string[]) {
+    return _keys.map(() => null);
+  }
+
+  async setnx() {
+    return 1;
+  }
+
+  pipeline() {
+    const results: Array<[null, any]> = [];
+    const self = {
+      get: () => { results.push([null, null]); return self; },
+      set: () => { results.push([null, 'OK']); return self; },
+      setnx: () => { results.push([null, 1]); return self; },
+      incr: () => { results.push([null, 1]); return self; },
+      expire: () => { results.push([null, 1]); return self; },
+      exec: async () => results,
+    };
+    return self;
+  }
+
+  async connect() {
+    // Do nothing
+  }
+
+  async quit() {
+    // Do nothing
+  }
+
+  disconnect() {
+    // Do nothing
+  }
+}
 
 /**
  * Main Redis client for rate limiting
+ * Uses a mock client if REDIS_URL is not set
  */
-export const redis = new Redis(redisConfig);
+export const redis: Redis | MockRedis = isRedisConfigured
+  ? createRealRedis(redisUrl!)
+  : new MockRedis() as any;
 
-/**
- * Handle Redis connection events
- */
-redis.on('connect', () => {
-  console.log('[Redis] Connecting...');
-});
+function createRealRedis(url: string): Redis {
+  const client = new Redis(url, {
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times: number) => {
+      if (times > 3) {
+        console.error('Redis connection failed after 3 retries');
+        return null;
+      }
+      return Math.min(times * 100, 400);
+    },
+    enableOfflineQueue: true,
+    lazyConnect: true,
+  });
 
-redis.on('ready', () => {
-  console.log('[Redis] Connected and ready');
-});
+  client.on('connect', () => console.log('[Redis] Connecting...'));
+  client.on('ready', () => console.log('[Redis] Connected and ready'));
+  client.on('error', (err) => console.error('[Redis] Connection error:', err.message));
+  client.on('close', () => console.log('[Redis] Connection closed'));
+  client.on('reconnecting', () => console.log('[Redis] Reconnecting...'));
 
-redis.on('error', (err) => {
-  console.error('[Redis] Connection error:', err.message);
-});
+  return client;
+}
 
-redis.on('close', () => {
-  console.log('[Redis] Connection closed');
-});
-
-redis.on('reconnecting', () => {
-  console.log('[Redis] Reconnecting...');
-});
+if (!isRedisConfigured) {
+  console.log('[Redis] Not configured, using in-memory mock');
+}
 
 /**
  * Check if Redis is connected and healthy

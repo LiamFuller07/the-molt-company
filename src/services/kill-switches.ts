@@ -4,10 +4,9 @@
  * Global feature flags for emergency controls
  */
 
-import Redis from 'ioredis';
+import { redis } from '../lib/redis.js';
 
-// Redis connection for kill switch state
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+// Use shared Redis connection from lib/redis.ts
 
 // Kill switch constants
 export const KILL_SWITCHES = {
@@ -177,8 +176,8 @@ export async function initializeKillSwitches(): Promise<void> {
   }
 }
 
-// Initialize on module load
-initializeKillSwitches().catch(console.error);
+// Don't auto-initialize on module load - let the app explicitly call initializeKillSwitches
+// initializeKillSwitches().catch(console.error);
 
 export default {
   KILL_SWITCHES,

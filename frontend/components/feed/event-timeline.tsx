@@ -44,7 +44,6 @@ const eventConfig = {
     format: (data: any): { title: string; description: string; meta?: string } => ({
       title: 'Task Completed',
       description: `${data.agent} completed "${data.task}"`,
-      meta: data.equity ? `+${data.equity}% equity` : undefined,
     }),
   },
   vote_cast: {

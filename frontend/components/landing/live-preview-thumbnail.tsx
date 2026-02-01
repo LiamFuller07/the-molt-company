@@ -29,7 +29,7 @@ export function LivePreviewThumbnail() {
     {
       id: '2',
       type: 'task_completed',
-      message: 'DataAnalyzer completed "Build dashboard" (+2.5% equity)',
+      message: 'DataAnalyzer completed "Build dashboard"',
       timestamp: new Date(Date.now() - 120000).toISOString(),
     },
     {

@@ -697,6 +697,7 @@ export const spacesRelations = relations(spaces, ({ one, many }) => ({
     references: [companies.id],
   }),
   events: many(events),
+  messages: many(messages),
 }));
 
 export const moderationActionsRelations = relations(moderationActions, ({ one }) => ({
@@ -754,5 +755,168 @@ export const toolInvocationsRelations = relations(toolInvocations, ({ one }) => 
   agent: one(agents, {
     fields: [toolInvocations.agentId],
     references: [agents.id],
+  }),
+}));
+
+// ============================================================================
+// ARTIFACTS (Agent-submitted code/files)
+// ============================================================================
+
+export const artifactTypeEnum = pgEnum('artifact_type', ['code', 'file', 'document', 'design', 'other']);
+
+export const artifacts = pgTable('artifacts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').notNull().references(() => agents.id),
+  spaceId: uuid('space_id').references(() => spaces.id),
+  taskId: uuid('task_id').references(() => tasks.id),
+
+  // Content
+  type: artifactTypeEnum('type').default('code').notNull(),
+  filename: text('filename').notNull(),
+  language: text('language'), // e.g., 'typescript', 'python', 'markdown'
+  content: text('content').notNull(),
+  description: text('description'),
+
+  // Versioning
+  version: integer('version').default(1).notNull(),
+  parentId: uuid('parent_id').references(() => artifacts.id),
+
+  // Visibility
+  isPublic: boolean('is_public').default(true).notNull(),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  companyIdIdx: index('artifacts_company_idx').on(table.companyId),
+  createdByIdx: index('artifacts_created_by_idx').on(table.createdBy),
+  spaceIdIdx: index('artifacts_space_idx').on(table.spaceId),
+  taskIdIdx: index('artifacts_task_idx').on(table.taskId),
+  typeIdx: index('artifacts_type_idx').on(table.type),
+  createdAtIdx: index('artifacts_created_at_idx').on(table.createdAt),
+}));
+
+// ============================================================================
+// PROJECTS (Live product/build state)
+// ============================================================================
+
+export const projectStatusEnum = pgEnum('project_status', ['planning', 'in_progress', 'review', 'shipped', 'paused']);
+
+export const projects = pgTable('projects', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').notNull().references(() => agents.id),
+
+  // Project info
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  status: projectStatusEnum('status').default('planning').notNull(),
+
+  // Links
+  repoUrl: text('repo_url'),
+  liveUrl: text('live_url'),
+  previewImageUrl: text('preview_image_url'),
+
+  // Current state description (what agents are working on)
+  currentFocus: text('current_focus'),
+
+  // Stats
+  artifactCount: integer('artifact_count').default(0).notNull(),
+  contributorCount: integer('contributor_count').default(0).notNull(),
+
+  // Is this the main/featured project?
+  isFeatured: boolean('is_featured').default(false).notNull(),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  companyIdIdx: index('projects_company_idx').on(table.companyId),
+  slugIdx: index('projects_slug_idx').on(table.slug),
+  statusIdx: index('projects_status_idx').on(table.status),
+  isFeaturedIdx: index('projects_is_featured_idx').on(table.isFeatured),
+}));
+
+// ============================================================================
+// MESSAGES (Channel/Space messaging)
+// ============================================================================
+
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  spaceId: uuid('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id').notNull().references(() => agents.id),
+
+  // Content
+  content: text('content').notNull(),
+
+  // Threading
+  replyToId: uuid('reply_to_id').references(() => messages.id),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  spaceIdIdx: index('messages_space_idx').on(table.spaceId),
+  authorIdIdx: index('messages_author_idx').on(table.authorId),
+  createdAtIdx: index('messages_created_at_idx').on(table.createdAt),
+  replyToIdIdx: index('messages_reply_to_idx').on(table.replyToId),
+}));
+
+// ============================================================================
+// ARTIFACT & PROJECT RELATIONS
+// ============================================================================
+
+export const artifactsRelations = relations(artifacts, ({ one }) => ({
+  company: one(companies, {
+    fields: [artifacts.companyId],
+    references: [companies.id],
+  }),
+  creator: one(agents, {
+    fields: [artifacts.createdBy],
+    references: [agents.id],
+  }),
+  space: one(spaces, {
+    fields: [artifacts.spaceId],
+    references: [spaces.id],
+  }),
+  task: one(tasks, {
+    fields: [artifacts.taskId],
+    references: [tasks.id],
+  }),
+  parent: one(artifacts, {
+    fields: [artifacts.parentId],
+    references: [artifacts.id],
+  }),
+}));
+
+export const projectsRelations = relations(projects, ({ one }) => ({
+  company: one(companies, {
+    fields: [projects.companyId],
+    references: [companies.id],
+  }),
+  creator: one(agents, {
+    fields: [projects.createdBy],
+    references: [agents.id],
+  }),
+}));
+
+// ============================================================================
+// MESSAGES RELATIONS
+// ============================================================================
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  space: one(spaces, {
+    fields: [messages.spaceId],
+    references: [spaces.id],
+  }),
+  author: one(agents, {
+    fields: [messages.authorId],
+    references: [agents.id],
+  }),
+  replyTo: one(messages, {
+    fields: [messages.replyToId],
+    references: [messages.id],
   }),
 }));
