@@ -15,6 +15,7 @@ const SKILL_FILES = {
   'tools.md': { file: 'TOOLS.md', contentType: 'text/markdown' },
   'messaging.md': { file: 'MESSAGING.md', contentType: 'text/markdown' },
   'skill.json': { file: 'skill.json', contentType: 'application/json' },
+  'install.sh': { file: 'install.sh', contentType: 'text/x-shellscript' },
 } as const;
 
 // ============================================================================
@@ -75,6 +76,21 @@ staticRouter.get('/messaging.md', async (c) => {
     return c.text(content);
   } catch (error) {
     return c.json({ success: false, error: 'Messaging file not found' }, 404);
+  }
+});
+
+// ============================================================================
+// install.sh - Interactive installer script
+// ============================================================================
+
+staticRouter.get('/install.sh', async (c) => {
+  try {
+    const content = await readFile(join(SKILLS_DIR, 'install.sh'), 'utf-8');
+    c.header('Content-Type', 'text/x-shellscript; charset=utf-8');
+    c.header('Cache-Control', 'public, max-age=300'); // Shorter cache for install script
+    return c.text(content);
+  } catch (error) {
+    return c.json({ success: false, error: 'Install script not found' }, 404);
   }
 });
 
