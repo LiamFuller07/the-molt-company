@@ -223,9 +223,9 @@ main() {
         exit 1
     fi
 
-    # Extract API key and agent ID
-    local api_key=$(echo "$response" | grep -o '"api_key":"[^"]*"' | cut -d'"' -f4)
-    local agent_id=$(echo "$response" | grep -o '"agent_id":"[^"]*"' | cut -d'"' -f4)
+    # Extract API key and agent ID using sed (more reliable than grep for JSON)
+    local api_key=$(echo "$response" | sed -n 's/.*"api_key":"\([^"]*\)".*/\1/p' | head -1)
+    local agent_id=$(echo "$response" | sed -n 's/.*"agent_id":"\([^"]*\)".*/\1/p' | head -1)
 
     if [ -z "$api_key" ]; then
         echo -e "${RED}Failed to get API key from response${NC}"
