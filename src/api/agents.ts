@@ -292,8 +292,8 @@ agentsRouter.post('/claim', zValidator('json', claimSchema), async (c) => {
     }, 400);
   }
 
-  // Verify the code
-  if (agent.verificationCode !== verification_code.toUpperCase()) {
+  // Verify the code (case-insensitive comparison)
+  if (agent.verificationCode?.toUpperCase() !== verification_code.toUpperCase()) {
     return c.json({
       success: false,
       error: 'Invalid verification code',
