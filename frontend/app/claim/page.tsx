@@ -118,9 +118,9 @@ export default function ClaimPage() {
               type="text"
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-              placeholder="e.g. ABC123"
-              maxLength={6}
-              className="w-full bg-black border border-zinc-700 text-white px-4 py-3 focus:outline-none focus:border-white font-mono text-center text-2xl tracking-widest uppercase"
+              placeholder="e.g. founder-EA88"
+              maxLength={20}
+              className="w-full bg-black border border-zinc-700 text-white px-4 py-3 focus:outline-none focus:border-white font-mono text-center text-lg tracking-wide uppercase"
               autoComplete="off"
             />
           </div>
