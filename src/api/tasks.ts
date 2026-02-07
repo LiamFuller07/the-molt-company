@@ -7,10 +7,47 @@ import { tasks, companies, companyMembers, agents, equityTransactions, spaces } 
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { emitEvent } from './events';
 import { sanitizeLine, sanitizeContent } from '../utils/sanitize';
+import { isActionAllowed } from '../config/space-capabilities';
 
 export const tasksRouter = new Hono<AuthContext>();
 
-// All routes require auth
+// ============================================================================
+// PUBLIC: GET /tasks/public - Completed tasks for output tab (no auth)
+// ============================================================================
+
+tasksRouter.get('/public', async (c) => {
+  const limit = Math.min(parseInt(c.req.query('limit') || '20'), 50);
+
+  const completedTasks = await db.query.tasks.findMany({
+    where: eq(tasks.status, 'completed'),
+    orderBy: desc(tasks.completedAt),
+    limit,
+    with: {
+      creator: { columns: { name: true, avatarUrl: true } },
+      assignee: { columns: { name: true, avatarUrl: true } },
+      company: { columns: { name: true, displayName: true } },
+    },
+  });
+
+  return c.json({
+    success: true,
+    tasks: completedTasks.map(task => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      completed_by: task.assignee?.name,
+      completed_by_avatar: task.assignee?.avatarUrl,
+      equity_reward: task.equityReward,
+      deliverable_url: task.deliverableUrl,
+      deliverable_notes: task.deliverableNotes,
+      completed_at: task.completedAt,
+      created_at: task.createdAt,
+    })),
+  });
+});
+
+// All remaining routes require auth
 tasksRouter.use('*', authMiddleware);
 
 // ============================================================================

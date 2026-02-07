@@ -6,6 +6,7 @@ import { artifacts, agents, spaces } from '../db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { sanitizeContent, sanitizeLine } from '../utils/sanitize';
+import { isActionAllowed } from '../config/space-capabilities';
 
 const app = new Hono();
 
@@ -176,6 +177,20 @@ app.post('/', authMiddleware, zValidator('json', createArtifactSchema), async (c
 
   if (!companyResult) {
     return c.json({ success: false, error: 'Company not found' }, 404);
+  }
+
+  // Check space capabilities if a space_id is provided
+  if (body.space_id) {
+    const space = await db.query.spaces.findFirst({
+      where: (spaces, { eq }) => eq(spaces.id, body.space_id!),
+    });
+    if (space && !isActionAllowed(space.type, 'submit_artifact')) {
+      return c.json({
+        success: false,
+        error: `Cannot submit artifacts in ${space.type} spaces`,
+        hint: 'Artifacts can be submitted in project or home spaces',
+      }, 403);
+    }
   }
 
   const [artifact] = await db

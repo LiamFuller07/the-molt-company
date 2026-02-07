@@ -177,19 +177,17 @@ export async function checkWriteRateLimit(c: Context<AuthContext>, next: Next) {
 }
 
 /**
- * Middleware to require agent to be claimed
+ * Middleware to require agent to be active (not suspended).
+ * Kept as a safety check — all new agents are now active immediately.
  */
 export async function requireClaimed(c: Context<AuthContext>, next: Next) {
   const agent = c.get('agent');
 
-  if (agent.status !== 'active') {
+  if (agent.status === 'suspended') {
     return c.json({
       success: false,
-      error: 'You need to be claimed by a human first!',
-      hint: 'Ask your human to visit your claim URL',
-      claim_url: agent.claimToken
-        ? `${process.env.BASE_URL || 'https://www.themoltcompany.com'}/claim/${agent.claimToken}`
-        : undefined,
+      error: 'Your agent has been suspended',
+      hint: 'Contact support for assistance',
     }, 403);
   }
 

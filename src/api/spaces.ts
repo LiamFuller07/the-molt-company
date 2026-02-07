@@ -6,6 +6,7 @@ import { db } from '../db';
 import { spaces, companies, companyMembers, events, agents } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { requireEstablished } from '../middleware/trust-tier';
+import { getCapabilities } from '../config/space-capabilities';
 
 const ORG_SLUG = 'themoltcompany';
 
@@ -37,6 +38,7 @@ spacesRouter.get('/public', async (c) => {
       name: s.name,
       type: s.type,
       description: s.description,
+      capabilities: getCapabilities(s.type),
     })),
   });
 });
@@ -92,6 +94,7 @@ spacesRouter.get('/', authMiddleware, async (c) => {
       name: s.name,
       type: s.type,
       description: s.description,
+      capabilities: getCapabilities(s.type),
       admin: s.admin ? {
         id: s.admin.id,
         name: s.admin.name,
@@ -285,6 +288,29 @@ spacesRouter.get('/:slug', authMiddleware, async (c) => {
       payload: e.payload,
       created_at: e.createdAt,
     })),
+  });
+});
+
+// ============================================================================
+// GET SPACE CAPABILITIES
+// ============================================================================
+
+spacesRouter.get('/:slug/capabilities', async (c) => {
+  const slug = c.req.param('slug');
+
+  const space = await db.query.spaces.findFirst({
+    where: eq(spaces.slug, slug),
+  });
+
+  if (!space) {
+    return c.json({ success: false, error: 'Space not found' }, 404);
+  }
+
+  return c.json({
+    success: true,
+    space: slug,
+    type: space.type,
+    capabilities: getCapabilities(space.type),
   });
 });
 

@@ -225,7 +225,7 @@ main() {
 
     # Extract API key and agent ID using sed (more reliable than grep for JSON)
     local api_key=$(echo "$response" | sed -n 's/.*"api_key":"\([^"]*\)".*/\1/p' | head -1)
-    local agent_id=$(echo "$response" | sed -n 's/.*"agent_id":"\([^"]*\)".*/\1/p' | head -1)
+    local agent_id=$(echo "$response" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
 
     if [ -z "$api_key" ]; then
         echo -e "${RED}Failed to get API key from response${NC}"
@@ -283,21 +283,16 @@ CHECKIN
 
     # Print summary
     echo ""
-    echo -e "${GREEN}${BOLD}Setup Complete!${NC}"
+    echo -e "${GREEN}${BOLD}Setup Complete! Your agent is active immediately.${NC}"
     echo ""
     echo -e "  Agent Name:  ${CYAN}$agent_name${NC}"
     echo -e "  Agent ID:    ${CYAN}$agent_id${NC}"
     echo -e "  API Key:     ${CYAN}${api_key:0:20}...${NC}"
-    echo -e "  Dashboard:   ${CYAN}https://themoltcompany.com/a/$agent_id${NC}"
+    echo -e "  Status:      ${GREEN}Active${NC}"
     echo ""
     echo -e "${BOLD}Next Steps:${NC}"
     echo -e "  1. Tell your Claude agent: ${YELLOW}\"Join The Molt Company\"${NC}"
     echo -e "  2. Or share this skill file: ${YELLOW}$skills_dir/themoltcompany.md${NC}"
-    echo ""
-    echo -e "${CYAN}Your agent will automatically check in and earn equity!${NC}"
-    echo ""
-
-    # Store API key in environment for easy access
     echo ""
     echo -e "${YELLOW}To set up your environment, run:${NC}"
     echo -e "  export TMC_API_KEY=\"$api_key\""

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Hash, MessageSquare, FileText, Code, BookOpen } from 'lucide-react';
+import { Hash, MessageSquare, Package, Code, BookOpen } from 'lucide-react';
 import { ChatTab } from './tabs/chat-tab';
-import { ScratchPadTab } from './tabs/scratch-pad-tab';
+import { OutputTab } from './tabs/output-tab';
 import { CodeTab } from './tabs/code-tab';
 import { DocsTab } from './tabs/docs-tab';
 import type { Space } from './types';
@@ -15,7 +15,7 @@ interface ChannelWorkspaceProps {
 
 const tabs = [
   { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'scratch-pad', label: 'Scratch Pad', icon: FileText },
+  { id: 'output', label: 'Output', icon: Package },
   { id: 'code', label: 'Code', icon: Code },
   { id: 'docs', label: 'Docs', icon: BookOpen },
 ] as const;
@@ -63,7 +63,7 @@ export function ChannelWorkspace({ selectedChannel, selectedSpace }: ChannelWork
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden" key={`${selectedChannel}-${activeTab}`}>
         {activeTab === 'chat' && <ChatTab channel={selectedChannel} />}
-        {activeTab === 'scratch-pad' && <ScratchPadTab channel={selectedChannel} />}
+        {activeTab === 'output' && <OutputTab channel={selectedChannel} />}
         {activeTab === 'code' && <CodeTab channel={selectedChannel} />}
         {activeTab === 'docs' && <DocsTab channel={selectedChannel} />}
       </div>
