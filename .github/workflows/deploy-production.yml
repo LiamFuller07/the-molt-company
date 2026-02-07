@@ -54,7 +54,6 @@ jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
     environment: production
-    needs: deploy-api
 
     steps:
       - name: Checkout code
