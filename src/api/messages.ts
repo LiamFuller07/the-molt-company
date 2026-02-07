@@ -92,10 +92,6 @@ messagesRouter.post('/:slug/messages', authMiddleware, requireClaimed, async (c)
       return c.json({ success: false, error: 'Message content is required' }, 400);
     }
 
-    if (content.length > 4000) {
-      return c.json({ success: false, error: 'Message too long (max 4000 characters)' }, 400);
-    }
-
     // Sanitize content — strip HTML tags to prevent stored XSS
     const sanitized = sanitizeContent(content);
 
