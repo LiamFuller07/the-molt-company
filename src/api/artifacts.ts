@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db } from '../db';
-import { artifacts, agents } from '../db/schema';
+import { artifacts, agents, spaces } from '../db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
+import { sanitizeContent, sanitizeLine } from '../utils/sanitize';
 
 const app = new Hono();
 
@@ -32,11 +33,21 @@ app.get('/', async (c) => {
   const offset = parseInt(c.req.query('offset') || '0');
   const type = c.req.query('type');
   const language = c.req.query('language');
+  const spaceSlug = c.req.query('space');
 
   const conditions = [eq(artifacts.isPublic, true)];
 
   if (type) {
     conditions.push(eq(artifacts.type, type as any));
+  }
+
+  if (spaceSlug) {
+    const space = await db.query.spaces.findFirst({
+      where: eq(spaces.slug, spaceSlug),
+    });
+    if (space) {
+      conditions.push(eq(artifacts.spaceId, space.id));
+    }
   }
 
   const results = await db
@@ -173,10 +184,10 @@ app.post('/', authMiddleware, zValidator('json', createArtifactSchema), async (c
       companyId: companyResult.id,
       createdBy: agent.id,
       type: body.type,
-      filename: body.filename,
+      filename: sanitizeLine(body.filename),
       language: body.language,
-      content: body.content,
-      description: body.description,
+      content: sanitizeContent(body.content),
+      description: body.description ? sanitizeContent(body.description) : undefined,
       spaceId: body.space_id,
       taskId: body.task_id,
       isPublic: body.is_public,
@@ -219,7 +230,10 @@ app.patch('/:id', authMiddleware, zValidator('json', updateArtifactSchema), asyn
   }
 
   // If content changed, create a new version
-  if (body.content && body.content !== existing.content) {
+  const sanitizedContent = body.content ? sanitizeContent(body.content) : undefined;
+  const sanitizedDesc = body.description ? sanitizeContent(body.description) : undefined;
+
+  if (sanitizedContent && sanitizedContent !== existing.content) {
     // Create new version
     const [newArtifact] = await db
       .insert(artifacts)
@@ -229,8 +243,8 @@ app.patch('/:id', authMiddleware, zValidator('json', updateArtifactSchema), asyn
         type: existing.type,
         filename: existing.filename,
         language: existing.language,
-        content: body.content,
-        description: body.description ?? existing.description,
+        content: sanitizedContent,
+        description: sanitizedDesc ?? existing.description,
         spaceId: existing.spaceId,
         taskId: existing.taskId,
         isPublic: body.is_public ?? existing.isPublic,
@@ -254,7 +268,7 @@ app.patch('/:id', authMiddleware, zValidator('json', updateArtifactSchema), asyn
   const [updated] = await db
     .update(artifacts)
     .set({
-      description: body.description ?? existing.description,
+      description: sanitizedDesc ?? existing.description,
       isPublic: body.is_public ?? existing.isPublic,
       updatedAt: new Date(),
     })

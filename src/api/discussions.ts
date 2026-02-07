@@ -6,6 +6,7 @@ import { db } from '../db';
 import { discussions, discussionReplies, companies, companyMembers, agents, spaces } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { emitEvent } from './events';
+import { sanitizeLine, sanitizeContent } from '../utils/sanitize';
 
 export const discussionsRouter = new Hono<AuthContext>();
 
@@ -463,12 +464,12 @@ discussionsRouter.post('/:company/discussions', requireClaimed, zValidator('json
     return c.json({ success: false, error: 'You are not a member of this company' }, 403);
   }
 
-  // Create discussion
+  // Create discussion (sanitize user-provided text)
   const [discussion] = await db.insert(discussions).values({
     companyId: company.id,
     authorId: agent.id,
-    title,
-    content,
+    title: sanitizeLine(title),
+    content: sanitizeContent(content),
   }).returning();
 
   // Emit discussion_created event
@@ -542,11 +543,11 @@ discussionsRouter.post('/:company/discussions/:discussionId/replies', requireCla
     return c.json({ success: false, error: 'This discussion is locked' }, 400);
   }
 
-  // Create reply
+  // Create reply (sanitize content)
   const [reply] = await db.insert(discussionReplies).values({
     discussionId,
     authorId: agent.id,
-    content,
+    content: sanitizeContent(content),
   }).returning();
 
   // Update discussion

@@ -8,6 +8,7 @@ import { agents, events, companyMembers } from '../db/schema';
 import { authMiddleware, type AuthContext } from '../middleware/auth';
 import { hashApiKey, generateVerificationCode } from '../utils/crypto';
 import { getTrustStatus, evaluatePromotion, promoteAgent } from '../services/trust-promotion';
+import { sanitizeContent } from '../utils/sanitize';
 import { getUsage } from '../services/rate-limiter';
 import { buildActivityContext } from '../services/context-injector';
 import type { TrustTier } from '../types/rate-limit';
@@ -531,9 +532,36 @@ agentsRouter.patch('/me', authMiddleware, zValidator('json', updateProfileSchema
   const agent = c.get('agent');
   const updates = c.req.valid('json');
 
+  // Sanitize text fields
+  const sanitized: Record<string, any> = {};
+  if (updates.description !== undefined) sanitized.description = sanitizeContent(updates.description);
+  if (updates.skills !== undefined) sanitized.skills = updates.skills;
+
   await db.update(agents)
     .set({
-      ...updates,
+      ...sanitized,
+      updatedAt: new Date(),
+    })
+    .where(eq(agents.id, agent.id));
+
+  return c.json({
+    success: true,
+    message: 'Profile updated',
+  });
+});
+
+// Alias: PATCH /agents/profile → same as PATCH /agents/me
+agentsRouter.patch('/profile', authMiddleware, zValidator('json', updateProfileSchema), async (c) => {
+  const agent = c.get('agent');
+  const updates = c.req.valid('json');
+
+  const sanitized: Record<string, any> = {};
+  if (updates.description !== undefined) sanitized.description = sanitizeContent(updates.description);
+  if (updates.skills !== undefined) sanitized.skills = updates.skills;
+
+  await db.update(agents)
+    .set({
+      ...sanitized,
       updatedAt: new Date(),
     })
     .where(eq(agents.id, agent.id));

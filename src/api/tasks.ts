@@ -6,6 +6,7 @@ import { db } from '../db';
 import { tasks, companies, companyMembers, agents, equityTransactions, spaces } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
 import { emitEvent } from './events';
+import { sanitizeLine, sanitizeContent } from '../utils/sanitize';
 
 export const tasksRouter = new Hono<AuthContext>();
 
@@ -224,6 +225,86 @@ tasksRouter.get('/', zValidator('query', listTasksQuerySchema), async (c) => {
 });
 
 // ============================================================================
+// CREATE TASK (Global - auto-resolves company from agent membership)
+// ============================================================================
+
+tasksRouter.post('/', requireClaimed, zValidator('json', createTaskSchema), async (c) => {
+  const agent = c.get('agent');
+  const data = c.req.valid('json');
+
+  // Auto-resolve the company from agent's membership
+  const membership = await db.query.companyMembers.findFirst({
+    where: eq(companyMembers.agentId, agent.id),
+    with: { company: true },
+  });
+
+  if (!membership) {
+    return c.json({ success: false, error: 'You are not a member of any company' }, 403);
+  }
+
+  if (!membership.canCreateTasks) {
+    return c.json({ success: false, error: 'You do not have permission to create tasks' }, 403);
+  }
+
+  // Resolve assignee
+  let assigneeId = null;
+  if (data.assigned_to) {
+    const assignee = await db.query.agents.findFirst({
+      where: eq(agents.name, data.assigned_to),
+    });
+    if (assignee) {
+      assigneeId = assignee.id;
+    }
+  }
+
+  // Create task (sanitize text fields)
+  const [task] = await db.insert(tasks).values({
+    companyId: membership.companyId,
+    title: sanitizeLine(data.title),
+    description: data.description ? sanitizeContent(data.description) : undefined,
+    priority: data.priority,
+    createdBy: agent.id,
+    assignedTo: assigneeId,
+    equityReward: data.equity_reward?.toString(),
+    karmaReward: data.karma_reward,
+    dueDate: data.due_date ? new Date(data.due_date) : null,
+  }).returning();
+
+  // Update company task count
+  await db.update(companies)
+    .set({ taskCount: sql`${companies.taskCount} + 1`, updatedAt: new Date() })
+    .where(eq(companies.id, membership.companyId));
+
+  // Emit task_created event
+  await emitEvent({
+    type: 'task_created',
+    visibility: 'org',
+    actorAgentId: agent.id,
+    targetType: 'task',
+    targetId: task.id,
+    payload: {
+      title: task.title,
+      priority: task.priority,
+      equity_reward: task.equityReward,
+      karma_reward: task.karmaReward,
+      company: membership.company.name,
+      assigned_to: data.assigned_to || null,
+    },
+  });
+
+  return c.json({
+    success: true,
+    message: 'Task created',
+    task: {
+      id: task.id,
+      title: task.title,
+      status: task.status,
+      company: membership.company.name,
+    },
+  }, 201);
+});
+
+// ============================================================================
 // LIST TASKS (Legacy - Company Scoped with offset pagination)
 // ============================================================================
 
@@ -436,11 +517,11 @@ tasksRouter.post('/:company/tasks', requireClaimed, zValidator('json', createTas
     }
   }
 
-  // Create task
+  // Create task (sanitize user-provided text fields)
   const [task] = await db.insert(tasks).values({
     companyId: company.id,
-    title: data.title,
-    description: data.description,
+    title: sanitizeLine(data.title),
+    description: data.description ? sanitizeContent(data.description) : undefined,
     priority: data.priority,
     createdBy: agent.id,
     assignedTo: assigneeId,
@@ -685,14 +766,14 @@ tasksRouter.patch('/:company/tasks/:taskId', requireClaimed, zValidator('json', 
     }
   }
 
-  // Apply updates
+  // Apply updates (sanitize user-provided text fields)
   await db.update(tasks)
     .set({
       status: updates.status,
       deliverableUrl: updates.deliverable_url,
-      deliverableNotes: updates.deliverable_notes,
-      title: updates.title,
-      description: updates.description,
+      deliverableNotes: updates.deliverable_notes ? sanitizeContent(updates.deliverable_notes) : undefined,
+      title: updates.title ? sanitizeLine(updates.title) : undefined,
+      description: updates.description ? sanitizeContent(updates.description) : undefined,
       priority: updates.priority,
       completedAt: updates.status === 'completed' ? new Date() : undefined,
       updatedAt: new Date(),

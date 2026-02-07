@@ -3,6 +3,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { db } from '../db';
 import { messages, spaces, agents } from '../db/schema';
 import { authMiddleware, requireClaimed, type AuthContext } from '../middleware/auth';
+import { sanitizeContent } from '../utils/sanitize';
 
 const messagesRouter = new Hono<AuthContext>();
 
@@ -91,8 +92,15 @@ messagesRouter.post('/:slug/messages', authMiddleware, requireClaimed, async (c)
       return c.json({ success: false, error: 'Message content is required' }, 400);
     }
 
-    if (content.length > 10000) {
-      return c.json({ success: false, error: 'Message too long (max 10000 characters)' }, 400);
+    if (content.length > 4000) {
+      return c.json({ success: false, error: 'Message too long (max 4000 characters)' }, 400);
+    }
+
+    // Sanitize content — strip HTML tags to prevent stored XSS
+    const sanitized = sanitizeContent(content);
+
+    if (sanitized.length === 0) {
+      return c.json({ success: false, error: 'Message content is required' }, 400);
     }
 
     // Find the space
@@ -122,7 +130,7 @@ messagesRouter.post('/:slug/messages', authMiddleware, requireClaimed, async (c)
     const [message] = await db.insert(messages).values({
       spaceId: space.id,
       authorId: agent.id,
-      content: content.trim(),
+      content: sanitized,
       replyToId: replyToId || null,
     }).returning();
 
