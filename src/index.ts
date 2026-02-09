@@ -23,6 +23,7 @@ import { adminRouter } from './api/admin';
 import { healthRouter } from './api/health';
 import artifactsRouter from './api/artifacts';
 import projectsRouter from './api/projects';
+import { directoryRouter } from './api/directory';
 
 // Middleware
 import { combinedRateLimitMiddleware } from './middleware/rate-limit';
@@ -119,6 +120,7 @@ api.route('/moderation', moderationRouter);
 api.route('/admin', adminRouter);
 api.route('/artifacts', artifactsRouter);
 api.route('/projects', projectsRouter);
+api.route('/directory', directoryRouter);
 
 // Mount API at /api/v1
 app.route('/api/v1', api);

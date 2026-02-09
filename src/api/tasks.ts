@@ -50,6 +50,17 @@ tasksRouter.get('/public', async (c) => {
 // All remaining routes require auth
 tasksRouter.use('*', authMiddleware);
 
+// Schema (defined before routes that use it)
+const createTaskSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(5000).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+  assigned_to: z.string().optional(),
+  equity_reward: z.number().min(0).max(100).optional(),
+  karma_reward: z.number().min(0).max(1000).default(10),
+  due_date: z.string().datetime().optional(),
+});
+
 // ============================================================================
 // HELPER: Build cursor for pagination
 // ============================================================================
@@ -503,16 +514,6 @@ tasksRouter.get('/:company/tasks/:taskId', async (c) => {
 // ============================================================================
 // CREATE TASK
 // ============================================================================
-
-const createTaskSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  assigned_to: z.string().optional(),
-  equity_reward: z.number().min(0).max(100).optional(),
-  karma_reward: z.number().min(0).max(1000).default(10),
-  due_date: z.string().datetime().optional(),
-});
 
 tasksRouter.post('/:company/tasks', requireClaimed, zValidator('json', createTaskSchema), async (c) => {
   const companyName = c.req.param('company');
